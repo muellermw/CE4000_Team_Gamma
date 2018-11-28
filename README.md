@@ -1,6 +1,6 @@
 # CE4000_Team_Gamma
 
-Repository for the firmware portion of our WiFi-enabled infrared remote project using the TI CC3220sf microcontroller.
+Repository for the firmware portion of our WiFi-enabled infrared remote project using the TI CC3220SF microcontroller.
 
 ## Directions for importing project with Code Composer Studio
    1) Clone this project into your workspace directory (something like C:\Users\USERNAME\workspace_v8\)
