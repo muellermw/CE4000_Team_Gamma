@@ -3,7 +3,7 @@
 Repository for the firmware portion of our WiFi-enabled infrared remote project using the TI CC3220sf microcontroller.
 
 ## Directions for importing project with Code Composer Studio
-   1) Clone this project into your workspace directory (something like C:\Users\Marcus\workspace_v8\)
+   1) Clone this project into your workspace directory (something like C:\Users\USERNAME\workspace_v8\)
    2) Start CCS
    3) [In the top left] Go to Project->Import CCS Projects...
    4) Click "Browse..." and then browse to the workspace directory (again, something like C:\Users\Marcus\workspace_v8\)
