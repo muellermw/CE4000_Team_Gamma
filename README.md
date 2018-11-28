@@ -1,2 +1,3 @@
 # CE4000_Team_Gamma
-Senior design team Gamma firmware repository
+
+Repository for the firmware portion of our WiFi-enabled infrared remote project using the TI CC3220sf microcontroller.
