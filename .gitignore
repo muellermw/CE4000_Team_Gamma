@@ -37,6 +37,9 @@ Thumbs.db
 # CCS stuff #
 #############
 *.prefs
+*.launch
+Debug/*
+Release/*
 .project
 .cproject
 .ccsproject
