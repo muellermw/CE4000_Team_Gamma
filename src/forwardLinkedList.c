@@ -42,7 +42,6 @@ bool fll_add(struct linkedList* list, const void* object, uint32_t size){
 		memcpy(node->data, object, size);
 
 		// Set the node structure elements
-		node->dataSize = size;
 		node->nextNode = NULL;
 
 		// Check if the list tail is null to avoid a null pointer dereference
@@ -88,8 +87,6 @@ bool fll_addIndex(struct linkedList* list, const void* object, uint32_t size, ui
 
 		// Copy the data from the object to the node
 		memcpy(node->data, object, size);
-
-		node->dataSize = size;
 
 		// If the new node is inserted at the first index it is the head
 		if(index == 0) {

@@ -20,7 +20,6 @@
  */
 struct listNode {
   void* data; // A pointer to the data contained within the node
-  uint32_t dataSize; // The size of the data in the node
   struct listNode* nextNode; // A pointer to the next node in the linked list
 };
 
