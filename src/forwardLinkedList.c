@@ -80,7 +80,7 @@ bool fll_addIndex(struct linkedList* list, const void* object, uint32_t size, ui
 	bool completed = false;
 
 	// Check the parameters for valid values to avoid null pointer dereferencing and index out of bounds errors
-	if((list != NULL) && (object != NULL) && (size != 0) && (index >= 0) && (index < list->size)){
+	if((list != NULL) && (object != NULL) && (size != 0) && (index < list->size)){
 		// Allocate space in memory for the new node and data
 		struct listNode* node = (struct listNode*)malloc(sizeof(struct listNode));
 		node->data = malloc(size);
@@ -133,7 +133,7 @@ bool fll_remove(struct linkedList* list, uint32_t index){
 	bool completed = false;
 
 	// Check if the parameters are valid to avoid null pointer dereferencing and index out of bounds errors
-	if((list != NULL) && (index >= 0) && (index < list->size)){
+	if((list != NULL) && (index < list->size)){
 		struct listNode* remove = NULL;
 		// Check if we are removing the head
 		if (index == 0) {
@@ -188,7 +188,7 @@ void* fll_get(struct linkedList* list, uint32_t index){
 	void* result = NULL;
 
 	// Check if the parameters are valid values to avoid null pointer dereferences and index out of bounds errors
-	if((list != NULL) && (index >= 0) && (index < list->size)){
+	if((list != NULL) && (index < list->size)){
 
 		// Iterate to the node to retrieve data from
 		struct linkedListIterator* iter = fll_getIterator(list);

@@ -11,6 +11,7 @@ GEN_CMDS__FLAG :=
 
 ORDERED_OBJS += \
 "./CC3220SF_LAUNCHXL.obj" \
+"./src/forwardLinkedList.obj" \
 "./src/main_nortos.obj" \
 "../CC3220SF_LAUNCHXL_NoRTOS.cmd" \
 $(GEN_CMDS__FLAG) \
@@ -130,35 +131,35 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXE_OUTPUTS += \
-CE4000_Firmware_CC3220SF.out \
+CE4000_Team_Gamma.out \
 
 EXE_OUTPUTS__QUOTED += \
-"CE4000_Firmware_CC3220SF.out" \
+"CE4000_Team_Gamma.out" \
 
 BIN_OUTPUTS += \
-CE4000_Firmware_CC3220SF.bin \
+CE4000_Team_Gamma.bin \
 
 BIN_OUTPUTS__QUOTED += \
-"CE4000_Firmware_CC3220SF.bin" \
+"CE4000_Team_Gamma.bin" \
 
 
 # All Target
 all: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
-	@$(MAKE) --no-print-directory -Onone "CE4000_Firmware_CC3220SF.out"
+	@$(MAKE) --no-print-directory -Onone "CE4000_Team_Gamma.out"
 
 # Tool invocations
-CE4000_Firmware_CC3220SF.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
+CE4000_Team_Gamma.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: "$@"'
 	@echo 'Invoking: ARM Linker'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=vfplib -me --define=NORTOS_SUPPORT -g --c99 --diag_warning=225 --diag_warning=255 --diag_wrap=off --display_error_number --gen_func_subsections=on -z -m"CE4000_Firmware_CC3220SF.map" -i"C:/ti/simplelink_cc32xx_sdk_2_30_00_05/source" -i"C:/ti/simplelink_cc32xx_sdk_2_30_00_05/kernel/nortos" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/lib" --diag_suppress=10063 --diag_wrap=off --display_error_number --warn_sections --xml_link_info="CE4000_Firmware_CC3220SF_linkInfo.xml" --entry_point=resetISR --rom_model -o "CE4000_Firmware_CC3220SF.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armcl" -mv7M4 --code_state=16 --float_support=vfplib -me --define=NORTOS_SUPPORT -g --c99 --diag_warning=225 --diag_warning=255 --diag_wrap=off --display_error_number --gen_func_subsections=on -z -m"CE4000_Team_Gamma.map" -i"C:/ti/simplelink_cc32xx_sdk_2_30_00_05/source" -i"C:/ti/simplelink_cc32xx_sdk_2_30_00_05/kernel/nortos" -i"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/lib" --diag_suppress=10063 --diag_wrap=off --display_error_number --warn_sections --xml_link_info="CE4000_Team_Gamma_linkInfo.xml" --entry_point=resetISR --rom_model -o "CE4000_Team_Gamma.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: "$@"'
 	@echo ' '
 	@$(MAKE) --no-print-directory post-build
 
-CE4000_Firmware_CC3220SF.bin: $(EXE_OUTPUTS)
+CE4000_Team_Gamma.bin: $(EXE_OUTPUTS)
 	@echo 'Building files: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo 'Invoking: ARM Hex Utility'
-	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armhex"  -o "CE4000_Firmware_CC3220SF.bin" $(EXE_OUTPUTS__QUOTED)
+	"C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armhex"  -o "CE4000_Team_Gamma.bin" $(EXE_OUTPUTS__QUOTED)
 	@echo 'Finished building: $(strip $(EXE_OUTPUTS__QUOTED))'
 	@echo ' '
 	@$(MAKE) --no-print-directory post-build
@@ -166,13 +167,13 @@ CE4000_Firmware_CC3220SF.bin: $(EXE_OUTPUTS)
 # Other Targets
 clean:
 	-$(RM) $(BIN_OUTPUTS__QUOTED)$(EXE_OUTPUTS__QUOTED)
-	-$(RM) "CC3220SF_LAUNCHXL.obj" "src\main_nortos.obj" 
-	-$(RM) "CC3220SF_LAUNCHXL.d" "src\main_nortos.d" 
+	-$(RM) "CC3220SF_LAUNCHXL.obj" "src\forwardLinkedList.obj" "src\main_nortos.obj" 
+	-$(RM) "CC3220SF_LAUNCHXL.d" "src\forwardLinkedList.d" "src\main_nortos.d" 
 	-@echo 'Finished clean'
 	-@echo ' '
 
 post-build:
-	-C:/ti/ccsv8/utils/tiobj2bin/tiobj2bin CE4000_Firmware_CC3220SF.out CE4000_Firmware_CC3220SF.bin C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armofd C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armhex C:/ti/ccsv8/utils/tiobj2bin/mkhex4bin
+	-C:/ti/ccsv8/utils/tiobj2bin/tiobj2bin CE4000_Team_Gamma.out CE4000_Team_Gamma.bin C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armofd C:/ti/ccsv8/tools/compiler/ti-cgt-arm_18.1.4.LTS/bin/armhex C:/ti/ccsv8/utils/tiobj2bin/mkhex4bin
 	-@echo ' '
 
 .PHONY: all clean dependents
