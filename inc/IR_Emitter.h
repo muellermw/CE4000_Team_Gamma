@@ -5,11 +5,9 @@
 #ifndef INC_IR_EMITTER_H_
 #define INC_IR_EMITTER_H_
 
-#define IR_OUTPUT_PIN Board_IR_OUTPUT_P53
-
 // Infrared LED control function shortcuts
-#define IR_LED_OFF() GPIO_write(IR_OUTPUT_PIN, Board_GPIO_LED_OFF)
-#define IR_LED_ON() GPIO_write(IR_OUTPUT_PIN, Board_GPIO_LED_ON)
+#define IR_LED_OFF() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_OFF)
+#define IR_LED_ON() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_ON)
 
 void IR_Init_Emitter();
 
