@@ -47,7 +47,6 @@ extern "C" {
 #define Board_ADC1                   CC3220SF_LAUNCHXL_ADC1
 
 #define Board_CAPTURE0               CC3220SF_LAUNCHXL_CAPTURE0
-#define Board_CAPTURE1               CC3220SF_LAUNCHXL_CAPTURE1
 
 #define Board_CRYPTO0                CC3220SF_LAUNCHXL_CRYPTO0
 

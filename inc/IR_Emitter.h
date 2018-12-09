@@ -1,9 +1,9 @@
 /**
- * IR_Control.h
+ * IR_Emitter.h
  */
 
-#ifndef INC_IR_CONTROL_H_
-#define INC_IR_CONTROL_H_
+#ifndef INC_IR_EMITTER_H_
+#define INC_IR_EMITTER_H_
 
 #define IR_OUTPUT_PIN Board_IR_OUTPUT_P53
 
@@ -11,6 +11,6 @@
 #define IR_LED_OFF() GPIO_write(IR_OUTPUT_PIN, Board_GPIO_LED_OFF)
 #define IR_LED_ON() GPIO_write(IR_OUTPUT_PIN, Board_GPIO_LED_ON)
 
-void IR_init();
+void IR_Init_Emitter();
 
-#endif /* INC_IR_CONTROL_H_ */
+#endif /* INC_IR_EMITTER_H_ */

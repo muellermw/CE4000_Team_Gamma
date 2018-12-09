@@ -41,7 +41,8 @@
 #include <ti/drivers/GPIO.h>
 // Board Header file
 #include "Board.h"
-#include "IR_Control.h"
+#include "IR_Emitter.h"
+#include "IR_Receiver.h"
 
 void gpioButtonFxn0(uint_least8_t index);
 
@@ -76,7 +77,8 @@ int main(void)
     GPIO_enableInt(Board_GPIO_BUTTON1);
 
     // Initialize IR control
-    IR_init();
+    IR_Init_Receiver();
+    IR_Init_Emitter();
 
     while (1) {}
 }

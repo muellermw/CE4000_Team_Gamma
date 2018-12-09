@@ -114,13 +114,9 @@ CaptureCC32XX_Object captureCC3220SFObjects[CC3220SF_LAUNCHXL_CAPTURECOUNT];
 const CaptureCC32XX_HWAttrs captureCC3220SFHWAttrs[CC3220SF_LAUNCHXL_CAPTURECOUNT] =
 {
       {
-         .capturePin = CaptureCC32XX_PIN_04,
+         .capturePin = CaptureCC32XX_PIN_50,
          .intPriority = ~0
-      },
-      {
-          .capturePin = CaptureCC32XX_PIN_05,
-          .intPriority = ~0
-      },
+      }
 };
 
 const Capture_Config Capture_config[CC3220SF_LAUNCHXL_CAPTURECOUNT] = {
@@ -128,11 +124,6 @@ const Capture_Config Capture_config[CC3220SF_LAUNCHXL_CAPTURECOUNT] = {
         .fxnTablePtr = &CaptureCC32XX_fxnTable,
         .object = &captureCC3220SFObjects[CC3220SF_LAUNCHXL_CAPTURE0],
         .hwAttrs = &captureCC3220SFHWAttrs[CC3220SF_LAUNCHXL_CAPTURE0]
-    },
-    {
-        .fxnTablePtr = &CaptureCC32XX_fxnTable,
-        .object = &captureCC3220SFObjects[CC3220SF_LAUNCHXL_CAPTURE1],
-        .hwAttrs = &captureCC3220SFHWAttrs[CC3220SF_LAUNCHXL_CAPTURE1]
     }
 };
 
