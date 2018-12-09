@@ -54,19 +54,12 @@ extern "C" {
 #define Board_GPIO_LED_ON            CC3220SF_LAUNCHXL_GPIO_LED_ON
 #define Board_GPIO_LED_OFF           CC3220SF_LAUNCHXL_GPIO_LED_OFF
 #define Board_GPIO_LED0              CC3220SF_LAUNCHXL_GPIO_LED_D10
-/*
- *  CC3220SF_LAUNCHXL_GPIO_LED_D8 and CC3220SF_LAUNCHXL_GPIO_LED_D9 are shared with the I2C
- *  and PWM peripherals. In order for those examples to work, these LEDs are
- *  taken out of gpioPinCOnfig[]
- */
-#define Board_GPIO_LED1              CC3220SF_LAUNCHXL_GPIO_LED_D10
-#define Board_GPIO_LED2              CC3220SF_LAUNCHXL_GPIO_LED_D10
 
 #define Board_GPIO_BUTTON0           CC3220SF_LAUNCHXL_GPIO_SW2
 #define Board_GPIO_BUTTON1           CC3220SF_LAUNCHXL_GPIO_SW3
 
 #define Board_EDGE_DETECT_P58        CC3220SF_LAUNCHXL_GPIO_P58
-#define Board_IR_OUTPUT_P50          CC3220SF_LAUNCHXL_GPIO_P50
+#define Board_IR_OUTPUT_P53          CC3220SF_LAUNCHXL_GPIO_P53
 
 #define Board_I2C0                   CC3220SF_LAUNCHXL_I2C0
 #define Board_I2C_TMP                CC3220SF_LAUNCHXL_I2C0

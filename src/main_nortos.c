@@ -36,91 +36,57 @@
  */
 #include <stdint.h>
 #include <stddef.h>
-
 #include <NoRTOS.h>
-
-/* Driver Header files */
+// Driver Header files
 #include <ti/drivers/GPIO.h>
-/* Example/Board Header files */
+// Board Header file
 #include "Board.h"
+#include "IR_Control.h"
 
-
-void IRedgeDetector(uint_least8_t index);
 void gpioButtonFxn0(uint_least8_t index);
-void gpioButtonFxn1(uint_least8_t index);
 
 /*
  *  ======== main ========
  */
 int main(void)
 {
-    /* Call driver init functions */
+    // Call driver init functions
     Board_initGeneral();
 
-    /* Start NoRTOS */
+    // Start NoRTOS
     NoRTOS_start();
 
-    /* Call driver init functions */
+    // Call driver init functions
     GPIO_init();
 
-    /* Configure the LED and button pins */
+    // Configure the LED and button pins
     GPIO_setConfig(Board_GPIO_LED0, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_LOW);
     GPIO_setConfig(Board_GPIO_BUTTON0, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
     GPIO_setConfig(Board_GPIO_BUTTON1, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
-    GPIO_setConfig(Board_EDGE_DETECT_P58, GPIO_CFG_IN_NOPULL | GPIO_CFG_IN_INT_BOTH_EDGES);
 
-    /* Turn on user LED */
+    // Turn on user LED
     GPIO_write(Board_GPIO_LED0, Board_GPIO_LED_ON);
-    GPIO_write(Board_IR_OUTPUT_P50, Board_GPIO_LED_OFF);
 
-    /* install Button callback */
+    // install Button callback
     GPIO_setCallback(Board_GPIO_BUTTON0, gpioButtonFxn0);
-    GPIO_setCallback(Board_GPIO_BUTTON1, gpioButtonFxn1);
-    GPIO_setCallback(Board_EDGE_DETECT_P58, IRedgeDetector);
+    GPIO_setCallback(Board_GPIO_BUTTON1, gpioButtonFxn0);
 
-    /* Enable interrupts */
+    // Enable interrupts
     GPIO_enableInt(Board_GPIO_BUTTON0);
     GPIO_enableInt(Board_GPIO_BUTTON1);
-    GPIO_enableInt(Board_EDGE_DETECT_P58);
+
+    // Initialize IR control
+    IR_init();
 
     while (1) {}
 }
 
-
-/*
- *  ======== IRedgeDetector ========
- *  Callback function for the GPIO edge interrupt on GPIOCC32XX_GPIO_03.
- */
-void IRedgeDetector(uint_least8_t index)
-{
-    /* Clear the GPIO interrupt and set the IR out to match the interrupt edge */
-    if (GPIO_read(Board_EDGE_DETECT_P58))
-    {
-        GPIO_write(Board_IR_OUTPUT_P50, Board_GPIO_LED_OFF);
-    }
-    else
-    {
-        GPIO_write(Board_IR_OUTPUT_P50, Board_GPIO_LED_ON);
-    }
-}
-
-/*
+/**
  *  ======== gpioButtonFxn0 ========
  *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON0.
  */
 void gpioButtonFxn0(uint_least8_t index)
 {
-    /* Clear the GPIO interrupt and toggle an LED */
-    GPIO_toggle(Board_GPIO_LED0);
-}
-
-/*
- *  ======== gpioButtonFxn1 ========
- *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON1.
- *  This may not be used for all boards.
- */
-void gpioButtonFxn1(uint_least8_t index)
-{
-    /* Clear the GPIO interrupt and toggle an LED */
+    // Clear the GPIO interrupt and toggle an LED
     GPIO_toggle(Board_GPIO_LED0);
 }
