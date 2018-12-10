@@ -9,6 +9,8 @@
 #include <ti/drivers/GPIO.h>
 // PWM Driver files
 #include <ti/drivers/PWM.h>
+// Timer Driver files
+#include <ti/drivers/Timer.h>
 // Board Header file
 #include "Board.h"
 #include "IR_Emitter.h"
@@ -17,9 +19,13 @@
 void IRinitPWMtimer();
 void IRstartPWMtimer();
 void IRstopPWMtimer();
+void IRinitOneShotTimer();
+void IRoneShotTimerHandler(Timer_Handle handle);
 
 static PWM_Handle pwmHandle;
 static PWM_Params pwmParams;
+static Timer_Handle oneShotHandle;
+static Timer_Params oneShotParams;
 
 /**
  * Initialize PWM and one-shot timers to recreate stored IR signals
@@ -27,6 +33,7 @@ static PWM_Params pwmParams;
 void IR_Init_Emitter()
 {
     IRinitPWMtimer();
+    IRinitOneShotTimer();
     // Set the IR LED off just to be sure it wasn't left on
     IR_LED_OFF();
 }
@@ -50,6 +57,28 @@ void IRinitPWMtimer()
     PWM_setDuty(pwmHandle, dutyValue);  // set duty cycle to 50%
 }
 
+void IRinitOneShotTimer()
+{
+    Timer_init();
+
+    Timer_Params_init(&oneShotParams);
+    oneShotParams.periodUnits = Timer_PERIOD_US;
+    oneShotParams.timerMode  = Timer_ONESHOT_CALLBACK;
+    oneShotParams.timerCallback = IRoneShotTimerHandler;
+}
+
+/**
+ *  ======== IRoneShotTimerHandler ========
+ *  Callback function for the capture timer learning interrupt
+ */
+void IRoneShotTimerHandler(Timer_Handle handle)
+{
+    // need to close the timer to set the delay to a different value
+    Timer_close(oneShotHandle);
+
+    // Do fancy stuff in here - yay!
+}
+
 void IRstartPWMtimer()
 {
     PWM_start(pwmHandle);
@@ -65,4 +94,15 @@ void IRsetPWMperiod(uint32_t period)
     PWM_setPeriod(pwmHandle, period);
     uint32_t dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 50) / 100);
     PWM_setDuty(pwmHandle, dutyValue);  // set duty cycle to 50%
+}
+
+void IRsetOneShotTimeout(uint32_t time_in_us)
+{
+    oneShotParams.period = time_in_us;
+    oneShotHandle = Timer_open(Board_TIMER0, &oneShotParams);
+}
+
+void IRstartOneShotTimer()
+{
+    Timer_start(oneShotHandle);
 }

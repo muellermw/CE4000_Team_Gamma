@@ -80,8 +80,6 @@ extern "C" {
 #define Board_SPI_SLAVE_READY        CC3220SF_LAUNCHXL_SPI_SLAVE_READY
 
 #define Board_TIMER0                 CC3220SF_LAUNCHXL_TIMER0
-#define Board_TIMER1                 CC3220SF_LAUNCHXL_TIMER1
-#define Board_TIMER2                 CC3220SF_LAUNCHXL_TIMER2
 
 #define Board_UART0                  CC3220SF_LAUNCHXL_UART0
 #define Board_UART1                  CC3220SF_LAUNCHXL_UART1

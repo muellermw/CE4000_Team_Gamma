@@ -615,23 +615,11 @@ TimerCC32XX_Object timerCC3220SFObjects[CC3220SF_LAUNCHXL_TIMERCOUNT];
 
 const TimerCC32XX_HWAttrs timerCC3220SFHWAttrs[CC3220SF_LAUNCHXL_TIMERCOUNT] = {
     {
-        .baseAddress = TIMERA0_BASE,
-        .subTimer = TimerCC32XX_timer32,
-        .intNum = INT_TIMERA0A,
-        .intPriority = ~0
-    },
-    {
         .baseAddress = TIMERA1_BASE,
-        .subTimer = TimerCC32XX_timer16A,
+        .subTimer = TimerCC32XX_timer32,
         .intNum = INT_TIMERA1A,
         .intPriority = ~0
-    },
-    {
-         .baseAddress = TIMERA1_BASE,
-         .subTimer = TimerCC32XX_timer16B,
-         .intNum = INT_TIMERA1B,
-         .intPriority = ~0
-    },
+    }
 };
 
 const Timer_Config Timer_config[CC3220SF_LAUNCHXL_TIMERCOUNT] = {
@@ -639,17 +627,7 @@ const Timer_Config Timer_config[CC3220SF_LAUNCHXL_TIMERCOUNT] = {
         .fxnTablePtr = &TimerCC32XX_fxnTable,
         .object = &timerCC3220SFObjects[CC3220SF_LAUNCHXL_TIMER0],
         .hwAttrs = &timerCC3220SFHWAttrs[CC3220SF_LAUNCHXL_TIMER0]
-    },
-    {
-        .fxnTablePtr = &TimerCC32XX_fxnTable,
-        .object = &timerCC3220SFObjects[CC3220SF_LAUNCHXL_TIMER1],
-        .hwAttrs = &timerCC3220SFHWAttrs[CC3220SF_LAUNCHXL_TIMER1]
-    },
-    {
-        .fxnTablePtr = &TimerCC32XX_fxnTable,
-        .object = &timerCC3220SFObjects[CC3220SF_LAUNCHXL_TIMER2],
-        .hwAttrs = &timerCC3220SFHWAttrs[CC3220SF_LAUNCHXL_TIMER2]
-    },
+    }
 };
 
 const uint_least8_t Timer_count = CC3220SF_LAUNCHXL_TIMERCOUNT;

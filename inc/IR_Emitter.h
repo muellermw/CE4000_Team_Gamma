@@ -14,7 +14,8 @@
 #define IR_LED_ON() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_ON)
 
 void IR_Init_Emitter();
-void IRstartPWMtimer();
 void IRsetPWMperiod(uint32_t period);
+void IRstartOneShotTimer();
+void IRsetOneShotTimeout(uint32_t time_in_us);
 
 #endif /* INC_IR_EMITTER_H_ */
