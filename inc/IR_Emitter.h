@@ -1,5 +1,9 @@
 /**
- * IR_Emitter.h
+ * IR_Emitter.c
+ *
+ * Authors: Max Kallenberger, Marcus Mueller
+ *
+ * Emitter is PIN 53. Need to change in CC3220SF_LaunchXL.c if you want to update.
  */
 
 #ifndef INC_IR_EMITTER_H_
