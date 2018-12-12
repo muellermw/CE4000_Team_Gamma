@@ -10,12 +10,13 @@
 #include <ti/drivers/Capture.h>
 #include <ti/drivers/GPIO.h>
 #include <stdlib.h>
+#include <Signal_Interval.h>
+#include <stdbool.h>
 
 #include "Board.h"
 #include "IR_Receiver.h"
 #include "IR_Emitter.h"
 #include "forwardLinkedList.h"
-#include "Signal_Edge.h"
 
 void IRinitSignalCapture();
 void IRstartSignalCapture();
@@ -31,9 +32,10 @@ Receiver_Mode receiverState;
 static struct linkedList* test;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
-volatile static SignalEdge sequence[MAX_INDEX];
-static uint32_t index = 0;
-static uint32_t totTime = 0;
+volatile static SignalInterval sequence[MAX_INDEX];
+volatile static SignalInterval currentInt;
+static uint32_t seqIndex = 0;
+static uint32_t totalCaptureTime = 0;
 
 /**
  * Initial setup of the IR receiver and its peripherals
@@ -74,38 +76,32 @@ void IRedgeDetectionPassthrough(uint_least8_t index)
  */
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 {
-    SignalEdge temp;
-    if(index == 0){
-        temp.time_us = 0;
+    if(seqIndex == 0){
+        seqIndex++;
+        currentInt.time_us = 0;
+        currentInt.PWM = true;
     }
-    else{
-        temp.time_us = interval;
-    }
-
-    if(!(index & 0b1)){
-        temp.PWM = true;
-    }
-    else{
-        temp.PWM = false;
-    }
-
-    if(index < MAX_INDEX){
-        sequence[index] = temp;
-        index++;
-    }
-    else{
+    else if((totalCaptureTime >= 125000) || (seqIndex >= MAX_INDEX)){
         IRstopSignalCapture();
-        index = 0;
-        totTime = 0;
+        seqIndex = 0;
+        totalCaptureTime = 0;
     }
-
-    totTime += temp.time_us;
-    if(totTime >= 125000){
-        IRstopSignalCapture();
-        index = 0;
-        totTime = 0;
+    else{
+        totalCaptureTime += interval;
+        if(interval <= 25){
+            currentInt.time_us += interval;
+        }
+        else{
+            sequence[seqIndex-1] = currentInt;
+            seqIndex++;
+            currentInt.time_us = interval;
+            currentInt.PWM = false;
+            sequence[seqIndex-1] = currentInt;
+            seqIndex++;
+            currentInt.time_us = 0;
+            currentInt.PWM = true;
+        }
     }
-
 }
 
 /**

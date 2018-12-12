@@ -9,7 +9,7 @@
 #define INC_IR_RECEIVER_H_
 
 #define CAPTURE_MAX_US 16777215 //(2^24-1)
-#define MAX_INDEX 7250
+#define MAX_INDEX 128 //7250
 
 typedef enum
 {

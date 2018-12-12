@@ -5,14 +5,14 @@
  *      Author: Max Kallenberger
  */
 
-#ifndef INC_SIGNAL_EDGE_H_
-#define INC_SIGNAL_EDGE_H_
+#ifndef INC_SIGNAL_INTERVAL_H_
+#define INC_SIGNAL_INTERVAL_H_
 
 #include <stdbool.h>
 
 typedef struct {
     uint32_t time_us;
     bool PWM;
-}SignalEdge;
+}SignalInterval;
 
-#endif /* INC_SIGNAL_EDGE_H_ */
+#endif /* INC_SIGNAL_INTERVAL_H_ */
