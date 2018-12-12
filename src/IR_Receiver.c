@@ -34,6 +34,8 @@ static Capture_Handle captureHandle;
 static Capture_Params captureParams;
 volatile static SignalInterval sequence[MAX_INDEX];
 volatile static SignalInterval currentInt;
+static uint16_t edgeCnt = 0;
+static uint16_t frequency = 0;
 static uint32_t seqIndex = 0;
 static uint32_t totalCaptureTime = 0;
 
@@ -85,13 +87,23 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         IRstopSignalCapture();
         seqIndex = 0;
         totalCaptureTime = 0;
+        edgeCnt = 0;
     }
     else{
+        if(frequency == 0){
+            edgeCnt++;
+        }
         totalCaptureTime += interval;
         if(interval <= 25){
             currentInt.time_us += interval;
         }
         else{
+            if(frequency == 0){
+                edgeCnt--;
+                float period_us = (currentInt.time_us*2);
+                period_us = period_us/edgeCnt;
+                frequency = 1000000/period_us;
+            }
             sequence[seqIndex-1] = currentInt;
             seqIndex++;
             currentInt.time_us = interval;
