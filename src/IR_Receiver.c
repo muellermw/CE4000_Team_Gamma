@@ -15,6 +15,7 @@
 #include "IR_Receiver.h"
 #include "IR_Emitter.h"
 #include "forwardLinkedList.h"
+#include "Signal_Edge.h"
 
 void IRinitSignalCapture();
 void IRstartSignalCapture();
@@ -30,6 +31,9 @@ Receiver_Mode receiverState;
 static struct linkedList* test;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
+volatile static SignalEdge sequence[MAX_INDEX];
+static uint32_t index = 0;
+static uint32_t totTime = 0;
 
 /**
  * Initial setup of the IR receiver and its peripherals
@@ -39,10 +43,12 @@ void IR_Init_Receiver()
     test = malloc(sizeof(struct linkedList));
     fll_init(test);
 
-    receiverState = passthru;
+    receiverState = program;
     IRinitSignalCapture();
     IRinitEdgeDetectGPIO();
-    IRstartEdgeDetectGPIO();
+    //IRstartEdgeDetectGPIO();
+
+    IRstartSignalCapture();
 }
 
 /**
@@ -68,7 +74,38 @@ void IRedgeDetectionPassthrough(uint_least8_t index)
  */
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 {
-    IR_LED_OFF();
+    SignalEdge temp;
+    if(index == 0){
+        temp.time_us = 0;
+    }
+    else{
+        temp.time_us = interval;
+    }
+
+    if(!(index & 0b1)){
+        temp.PWM = true;
+    }
+    else{
+        temp.PWM = false;
+    }
+
+    if(index < MAX_INDEX){
+        sequence[index] = temp;
+        index++;
+    }
+    else{
+        IRstopSignalCapture();
+        index = 0;
+        totTime = 0;
+    }
+
+    totTime += temp.time_us;
+    if(totTime >= 125000){
+        IRstopSignalCapture();
+        index = 0;
+        totTime = 0;
+    }
+
 }
 
 /**
@@ -82,7 +119,7 @@ void IRinitSignalCapture()
     Capture_Params_init(&captureParams);
     captureParams.mode  = Capture_ANY_EDGE;
     captureParams.callbackFxn = IRedgeProgramButton;
-    captureParams.periodUnit = Capture_PERIOD_COUNTS;
+    captureParams.periodUnit = Capture_PERIOD_US;
     captureHandle = Capture_open(Board_CAPTURE0, &captureParams);
     // Make sure this capture timer is not running yet
     Capture_stop(captureHandle);
