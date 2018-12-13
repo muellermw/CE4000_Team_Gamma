@@ -27,6 +27,7 @@ void IRstopEdgeDetectGPIO();
 void IRreceiverSwitchMode();
 void IRedgeDetectionPassthrough(uint_least8_t index);
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
+static void ConvertToUs(SignalInterval *seq, uint32_t length);
 
 Receiver_Mode receiverState;
 static struct linkedList* test;
@@ -36,7 +37,7 @@ static SignalInterval sequence[MAX_INDEX];
 static SignalInterval currentInt;
 static uint16_t edgeCnt = 0;
 static uint16_t frequency = 0;
-static uint32_t seqIndex = 0;
+static int32_t seqIndex = -1;
 static uint32_t totalCaptureTime = 0;
 static bool buttonCaptured = false;
 
@@ -81,14 +82,18 @@ void IRedgeDetectionPassthrough(uint_least8_t index)
  */
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 {
-    if(seqIndex == 0){
+    interval = interval * 125;
+    if(seqIndex == -1){
         seqIndex++;
         currentInt.time_us = 0;
         currentInt.PWM = true;
     }
-    else if((totalCaptureTime >= 125000) || (seqIndex >= MAX_INDEX)){
+    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_INDEX)){
         IRstopSignalCapture();
-        seqIndex = 0;
+        seqIndex--;
+        (sequence[seqIndex]).time_us = 0;
+        ConvertToUs(sequence, seqIndex);
+        seqIndex = -1;
         totalCaptureTime = 0;
         edgeCnt = 0;
         buttonCaptured = true;
@@ -98,20 +103,20 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             edgeCnt++;
         }
         totalCaptureTime += interval;
-        if(interval <= 25){
+        if(interval <= 250000){
             currentInt.time_us += interval;
         }
         else{
             if(frequency == 0){
                 edgeCnt--;
                 uint32_t period_us = (currentInt.time_us*2);
-                frequency = (1000000*edgeCnt)/period_us;
+                frequency = (10000000000*edgeCnt)/period_us;
             }
-            sequence[seqIndex-1] = currentInt;
+            sequence[seqIndex] = currentInt;
             seqIndex++;
             currentInt.time_us = interval;
             currentInt.PWM = false;
-            sequence[seqIndex-1] = currentInt;
+            sequence[seqIndex] = currentInt;
             seqIndex++;
             currentInt.time_us = 0;
             currentInt.PWM = true;
@@ -130,7 +135,7 @@ void IRinitSignalCapture()
     Capture_Params_init(&captureParams);
     captureParams.mode  = Capture_ANY_EDGE;
     captureParams.callbackFxn = IRedgeProgramButton;
-    captureParams.periodUnit = Capture_PERIOD_US;
+    captureParams.periodUnit = Capture_PERIOD_COUNTS;
     captureHandle = Capture_open(Board_CAPTURE0, &captureParams);
     // Make sure this capture timer is not running yet
     Capture_stop(captureHandle);
@@ -211,4 +216,13 @@ uint16_t getIRcarrierFrequency()
 bool IRbuttonReady()
 {
     return buttonCaptured;
+}
+
+static void ConvertToUs(SignalInterval *seq, uint32_t length){
+    if(length >= MAX_INDEX){
+        length = MAX_INDEX;
+    }
+    for(int i = 0; i < length; i++){
+        (seq[i]).time_us = ((seq[i]).time_us / 10000);
+    }
 }
