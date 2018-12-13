@@ -91,4 +91,10 @@ void gpioButtonFxn0(uint_least8_t index)
 {
     // Clear the GPIO interrupt and toggle an LED
     GPIO_toggle(Board_GPIO_LED0);
+
+    // send a button as a test in this interrupt for now
+    if (IRbuttonReady() && !IRbuttonSending())
+    {
+        IRemitterSendButton(getIRsequence(), getIRcarrierFrequency());
+    }
 }

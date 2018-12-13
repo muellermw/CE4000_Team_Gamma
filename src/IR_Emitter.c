@@ -26,6 +26,10 @@ static PWM_Handle pwmHandle;
 static PWM_Params pwmParams;
 static Timer_Handle oneShotHandle;
 static Timer_Params oneShotParams;
+static SignalInterval* currentOutputSequence = 0;
+static uint16_t currentOutputIndex = 0;
+static bool sendingButton = false;
+
 
 /**
  * Initialize PWM and one-shot timers to recreate stored IR signals
@@ -69,14 +73,35 @@ void IRinitOneShotTimer()
 
 /**
  *  ======== IRoneShotTimerHandler ========
- *  Callback function for the capture timer learning interrupt
+ *  Callback function for the one-shot timer signal sending interrupt
  */
 void IRoneShotTimerHandler(Timer_Handle handle)
 {
     // need to close the timer to set the delay to a different value
     Timer_close(oneShotHandle);
 
-    // Do fancy stuff in here - yay!
+    if (currentOutputSequence[currentOutputIndex].time_us != 0)
+    {
+        IRsetOneShotTimeout(currentOutputSequence[currentOutputIndex].time_us);
+
+        if (currentOutputSequence[currentOutputIndex].PWM == true)
+        {
+            IRstartPWMtimer();
+        }
+        else
+        {
+            IRstopPWMtimer();
+        }
+
+        currentOutputIndex++;
+        IRstartOneShotTimer();
+
+    }
+    else
+    {
+        IRstopPWMtimer();
+        sendingButton = false;
+    }
 }
 
 void IRstartPWMtimer()
@@ -105,4 +130,20 @@ void IRsetOneShotTimeout(uint32_t time_in_us)
 void IRstartOneShotTimer()
 {
     Timer_start(oneShotHandle);
+}
+
+void IRemitterSendButton(SignalInterval* button, uint16_t frequency)
+{
+    sendingButton = true;
+    currentOutputIndex = 0;
+    currentOutputSequence = button;
+    IRsetPWMperiod((uint32_t)frequency);
+    // set a default timeout to start the IR sequence outside of any interrupt
+    IRsetOneShotTimeout(50);
+    IRstartOneShotTimer();
+}
+
+bool IRbuttonSending()
+{
+    return sendingButton;
 }

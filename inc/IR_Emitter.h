@@ -9,6 +9,8 @@
 #ifndef INC_IR_EMITTER_H_
 #define INC_IR_EMITTER_H_
 
+#include "Signal_Interval.h"
+
 // Infrared LED control function shortcuts
 #define IR_LED_OFF() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_OFF)
 #define IR_LED_ON() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_ON)
@@ -17,5 +19,8 @@ void IR_Init_Emitter();
 void IRsetPWMperiod(uint32_t period);
 void IRstartOneShotTimer();
 void IRsetOneShotTimeout(uint32_t time_in_us);
+void IRemitterSendButton(SignalInterval* button, uint16_t frequency);
+bool IRbuttonReady();
+bool IRbuttonSending();
 
 #endif /* INC_IR_EMITTER_H_ */

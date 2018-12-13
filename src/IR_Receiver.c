@@ -32,12 +32,13 @@ Receiver_Mode receiverState;
 static struct linkedList* test;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
-volatile static SignalInterval sequence[MAX_INDEX];
-volatile static SignalInterval currentInt;
+static SignalInterval sequence[MAX_INDEX];
+static SignalInterval currentInt;
 static uint16_t edgeCnt = 0;
 static uint16_t frequency = 0;
 static uint32_t seqIndex = 0;
 static uint32_t totalCaptureTime = 0;
+static bool buttonCaptured = false;
 
 /**
  * Initial setup of the IR receiver and its peripherals
@@ -48,6 +49,8 @@ void IR_Init_Receiver()
     fll_init(test);
 
     receiverState = program;
+    // make sure the sequence array is initialized to zero
+    memset(&sequence[0], 0, sizeof(sequence));
     IRinitSignalCapture();
     IRinitEdgeDetectGPIO();
     //IRstartEdgeDetectGPIO();
@@ -88,6 +91,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         seqIndex = 0;
         totalCaptureTime = 0;
         edgeCnt = 0;
+        buttonCaptured = true;
     }
     else{
         if(frequency == 0){
@@ -100,9 +104,8 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         else{
             if(frequency == 0){
                 edgeCnt--;
-                float period_us = (currentInt.time_us*2);
-                period_us = period_us/edgeCnt;
-                frequency = 1000000/period_us;
+                uint32_t period_us = (currentInt.time_us*2);
+                frequency = (1000000*edgeCnt)/period_us;
             }
             sequence[seqIndex-1] = currentInt;
             seqIndex++;
@@ -193,4 +196,19 @@ void IRreceiverSwitchMode()
         IRstartSignalCapture();
         break;
     }
+}
+
+SignalInterval* getIRsequence()
+{
+    return &sequence[0];
+}
+
+uint16_t getIRcarrierFrequency()
+{
+    return frequency;
+}
+
+bool IRbuttonReady()
+{
+    return buttonCaptured;
 }
