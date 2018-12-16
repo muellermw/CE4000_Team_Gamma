@@ -6,6 +6,7 @@
  *  Created on: Dec 16, 2018
  *      Author: haasbr
  */
+
 // Driver for NVS
 #include <ti/drivers/NVS.h>
 #include "Board.h"
@@ -15,6 +16,9 @@
 NVS_Handle rHandle;
 NVS_Attrs regionAttrs;
 
+/*
+ * Initialize non-volatile storage with a call to the driver init function
+ */
 void init_NVS(){
     NVS_init();
     return;
@@ -26,11 +30,9 @@ void init_NVS(){
  * @returns: a void pointer to the data read at the memory
  */
 void writetoNVS(void* dataToWrite, uint32_t region, uint32_t sizeOfData){
-    //
     // Open the NVS region specified by the 0 element in the NVS_config[]
     // array defined in Board.c.
     // Use default NVS_Params to open this memory region, hence NULL
-    //
     rHandle = NVS_open(Board_NVSINTERNAL, NULL);//open the region
 
     // fetch the generic NVS region attributes
@@ -42,8 +44,9 @@ void writetoNVS(void* dataToWrite, uint32_t region, uint32_t sizeOfData){
     NVS_write(rHandle, region, dataToWrite, sizeOfData+1, NVS_WRITE_POST_VERIFY);
 
     // close the region
-       NVS_close(rHandle);
+    NVS_close(rHandle);
 }
+
 /*
  * This method reads data from memory and returns it
  * @params: We need to know what region of the memory to read from
@@ -53,16 +56,13 @@ void* readfromNVS(uint32_t region, uint32_t returnDataSize){
     // Open the NVS region specified by the 0 element in the NVS_config[]
     // array defined in Board.c.
     // Use default NVS_Params to open this memory region, hence NULL
-    //
     rHandle = NVS_open(Board_NVSINTERNAL, NULL);
-    void* returnData;
+    void* returnData = malloc(returnDataSize);
     // copy contents from region into returnData
     NVS_read(rHandle, region, returnData, returnDataSize+1);
 
+    // close the region
+    NVS_close(rHandle);
 
-   // close the region
-   NVS_close(rHandle);
-
-   return returnData;
-
+    return returnData;
 }
