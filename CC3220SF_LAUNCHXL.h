@@ -190,6 +190,16 @@ typedef enum CC3220SF_LAUNCHXL_WatchdogName {
 } CC3220SF_LAUNCHXL_WatchdogName;
 
 /*!
+ * @def     CC3220SF_LAUNCHXL_NVSName
+ * @brief   Enum of NVS driver on the CC3220SF_LAUNCHXL dev board
+ */
+typedef enum CC3220SF_LAUNCHXL_NVSName {
+    CC3220SF_LAUNCHXL_NVS0 = 0,
+
+    CC3220SF_LAUNCHXL_NVSCOUNT
+} CC3220SF_LAUNCHXL_NVSName;
+
+/*!
  *  @brief  Initialize the general board specific settings
  *
  *  This function initializes the general board specific settings.

@@ -86,6 +86,8 @@ extern "C" {
 
 #define Board_WATCHDOG0              CC3220SF_LAUNCHXL_WATCHDOG0
 
+#define Board_NVSINTERNAL            CC3220SF_LAUNCHXL_NVS0
+
 /* Board specific I2C addresses */
 #define Board_TMP_ADDR               (0x41)
 #define Board_SENSORS_BP_TMP_ADDR    (0x40)
