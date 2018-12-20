@@ -88,7 +88,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         currentInt.time_us = 0;
         currentInt.PWM = true;
     }
-    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_INDEX)){
+    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_INDEX) || (seqIndex == -2)){
         IRstopSignalCapture();
         seqIndex--;
         (sequence[seqIndex]).time_us = 0;
@@ -120,6 +120,9 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             seqIndex++;
             currentInt.time_us = 0;
             currentInt.PWM = true;
+            if(interval >= 200000000){
+                seqIndex = -2;
+            }
         }
     }
 }
