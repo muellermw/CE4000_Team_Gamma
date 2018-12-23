@@ -38,8 +38,8 @@ Thumbs.db
 #############
 *.prefs
 *.launch
-Release/*
 .project
 .cproject
 .ccsproject
 /Debug/
+/Release/
