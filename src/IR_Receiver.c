@@ -3,7 +3,7 @@
  *
  * Authors: Max Kallenberger, Marcus Mueller
  *
- * Receiver is PIN 50 for the capture timer, PIN 64 for the passthrough GPIO.
+ * Receiver is PIN 50 for the capture timer, PIN 2 for the passthrough GPIO.
  * Need to change pins in CC3220SF_LaunchXL.c if you want to update.
  */
 

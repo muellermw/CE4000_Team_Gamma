@@ -763,44 +763,6 @@ const Watchdog_Config Watchdog_config[CC3220SF_LAUNCHXL_WATCHDOGCOUNT] = {
 
 const uint_least8_t Watchdog_count = CC3220SF_LAUNCHXL_WATCHDOGCOUNT;
 
-
-/*
- * =============================== NVS ===============================
- */
-#include <ti/drivers/NVS.h>
-#include <ti/drivers/nvs/NVSRAM.h>
-
-#define SECTORSIZE (4096)
-#if defined(__TI_COMPILER_VERSION__)
-#pragma DATA_ALIGN(ramBuf, 4096)
-#elif defined(__IAR_SYSTEMS_ICC__)
-#pragma data_alignment=4096
-#elif defined(__GNUC__)
-__attribute__ ((aligned (4096)))
-#endif
-static char ramBuf[SECTORSIZE * 4];
-
-NVSRAM_Object nvsCC3220SObjects[CC3220SF_LAUNCHXL_NVSCOUNT];
-
-NVSRAM_HWAttrs NVSRAMHWAttrs[1] = {
-    {
-        .regionBase = (void *) ramBuf,
-        .regionSize = SECTORSIZE * 4,
-        .sectorSize = SECTORSIZE
-    }
-};
-
-const NVS_Config NVS_config[CC3220SF_LAUNCHXL_NVSCOUNT] = {
-    {
-        .fxnTablePtr = &NVSRAM_fxnTable,
-        .object = &nvsCC3220SObjects[CC3220SF_LAUNCHXL_NVS0],
-        .hwAttrs = &NVSRAMHWAttrs[CC3220SF_LAUNCHXL_NVS0]
-    }
-};
-
-const uint_least8_t NVS_count = CC3220SF_LAUNCHXL_NVSCOUNT;
-
-
 /*
  *  ======== Board_debugHeader ========
  *  This structure prevents the CC32XXSF bootloader from overwriting the

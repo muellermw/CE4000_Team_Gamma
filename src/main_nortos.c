@@ -46,6 +46,7 @@
 #include "Board.h"
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
+#include "filesystem.h"
 
 void gpioButtonFxn0(uint_least8_t index);
 
@@ -60,39 +61,8 @@ int main(void)
     // Start NoRTOS
     NoRTOS_start();
 
-    NVS_Handle rHandle;
-    NVS_Attrs regionAttrs;
-    uint_fast16_t status;
-    char buf[32];
-    // Initialize the NVS driver
-    NVS_init();
-    //
-    // Open the NVS region specified by the 0 element in the NVS_config[]
-    // array defined in Board.c.
-    // Use default NVS_Params to open this memory region, hence NULL
-    //
-    rHandle = NVS_open(Board_NVSINTERNAL, NULL);
-
-    // fetch the generic NVS region attributes
-    NVS_getAttrs(rHandle, &regionAttrs);
-    // erase the first sector of the NVS region
-    status = NVS_erase(rHandle, 0, regionAttrs.sectorSize);
-    if (status != NVS_STATUS_SUCCESS) {
-        // Error handling code
-    }
-    // write "Hello" to the base address of region 0, verify after write
-    status = NVS_write(rHandle, 0, "Hello", strlen("Hello")+1, NVS_WRITE_POST_VERIFY);
-    if (status != NVS_STATUS_SUCCESS) {
-        // Error handling code
-    }
-    // copy "Hello" from region0 into local 'buf'
-    status = NVS_read(rHandle, 0, buf, strlen("Hello")+1);
-    if (status != NVS_STATUS_SUCCESS) {
-        // Error handling code
-    }
-
-    // close the region
-    NVS_close(rHandle);
+    // Enable the file system NVS driver
+    filesystem_init();
 
     // Call driver init functions
     GPIO_init();
@@ -116,6 +86,7 @@ int main(void)
     // Initialize IR control
     IR_Init_Receiver();
     IR_Init_Emitter();
+
 
     while (1) {}
 }
