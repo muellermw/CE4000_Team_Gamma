@@ -114,8 +114,8 @@ CaptureCC32XX_Object captureCC3220SFObjects[CC3220SF_LAUNCHXL_CAPTURECOUNT];
 const CaptureCC32XX_HWAttrs captureCC3220SFHWAttrs[CC3220SF_LAUNCHXL_CAPTURECOUNT] =
 {
       {
-         // PIN_50 uses Timer0A
-         .capturePin = CaptureCC32XX_PIN_50,
+         // PIN_50 uses Timer3A
+         .capturePin = CaptureCC32XX_PIN_06,
          .intPriority = ~0
       }
 };
@@ -221,12 +221,10 @@ GPIO_PinConfig gpioPinConfigs[] = {
     /* CC3220SF_LAUNCHXL_GPIO_SW3 INTERRUPT */
     GPIOCC32XX_GPIO_22 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_RISING,
     /* CC3220SF_LAUNCHXL_GPIO_IR_EDGE_DETECT INTERRUPT */
-    GPIOCC32XX_GPIO_11 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES,
-    /* CC3220SF_LAUNCHXL_GPIO_IR_LED_OUTPUT*/
-    GPIOCC32XX_GPIO_10 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
+    GPIOCC32XX_GPIO_14 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES,
 
     /* output pins */
-    /* CC3220SF_LAUNCHXL_GPIO_LED_D10 */
+    /* CC3220SF_LAUNCHXL_GPIO_IR_LED_OUTPUT*/
     GPIOCC32XX_GPIO_09 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW
 };
 
@@ -458,16 +456,16 @@ const PowerCC32XX_ConfigV1 PowerCC32XX_config = {
 PWMTimerCC32XX_Object pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWMCOUNT];
 
 const PWMTimerCC32XX_HWAttrsV2 pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWMCOUNT] = {
-    {    /* CC3220SF_LAUNCHXL_PWM6 Timer3A */
-        .pwmPin = PWMTimerCC32XX_PIN_01
+    {    /* CC3220SF_LAUNCHXL_PWM0 Timer2B */
+        .pwmPin = PWMTimerCC32XX_PIN_64
     }
 };
 
 const PWM_Config PWM_config[CC3220SF_LAUNCHXL_PWMCOUNT] = {
     {
         .fxnTablePtr = &PWMTimerCC32XX_fxnTable,
-        .object = &pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWM6],
-        .hwAttrs = &pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWM6]
+        .object = &pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWM0],
+        .hwAttrs = &pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWM0]
     }
 };
 

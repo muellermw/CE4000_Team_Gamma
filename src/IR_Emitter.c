@@ -1,8 +1,7 @@
 /**
  * IR_Emitter.c
  *
- * Emitter LED is on PIN 1 (which is where the PWM timer sends its signal)
- * Need to change pins in CC3220SF_LaunchXL.c if you want to update.
+ * Emitter LED is on GPIO 9 (PIN 64) (which is where the PWM timer sends its signal)
  */
 
 // GPIO Driver files

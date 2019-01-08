@@ -52,7 +52,6 @@ extern "C" {
 
 #define Board_GPIO_LED_ON            CC3220SF_LAUNCHXL_GPIO_LED_ON
 #define Board_GPIO_LED_OFF           CC3220SF_LAUNCHXL_GPIO_LED_OFF
-#define Board_GPIO_LED0              CC3220SF_LAUNCHXL_GPIO_LED_D10
 
 #define Board_GPIO_BUTTON0           CC3220SF_LAUNCHXL_GPIO_SW2
 #define Board_GPIO_BUTTON1           CC3220SF_LAUNCHXL_GPIO_SW3
@@ -65,8 +64,7 @@ extern "C" {
 
 #define Board_I2S0                   CC3220SF_LAUNCHXL_I2S0
 
-#define Board_PWM0                   CC3220SF_LAUNCHXL_PWM6
-#define Board_PWM1                   CC3220SF_LAUNCHXL_PWM7
+#define Board_PWM0                   CC3220SF_LAUNCHXL_PWM0
 
 #define Board_SD0                    CC3220SF_LAUNCHXL_SD0
 

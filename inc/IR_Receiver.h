@@ -1,8 +1,9 @@
-/*
+/**
  * IR_Receiver.h
  *
- *  Created on: Dec 8, 2018
- *      Author: Max Kallenberger
+ * Author: Max Kallenberger
+ *
+ * Receiver is GPIO 15 (PIN 6) for the capture timer, GPIO 14 (PIN 5) for the passthrough interrupt.
  */
 
 #ifndef INC_IR_RECEIVER_H_

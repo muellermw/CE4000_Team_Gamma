@@ -67,13 +67,9 @@ int main(void)
     // Call driver init functions
     GPIO_init();
 
-    // Configure the LED and button pins
-    GPIO_setConfig(Board_GPIO_LED0, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_LOW);
+    // Configure the button pins
     GPIO_setConfig(Board_GPIO_BUTTON0, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
     GPIO_setConfig(Board_GPIO_BUTTON1, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
-
-    // Turn on user LED
-    GPIO_write(Board_GPIO_LED0, Board_GPIO_LED_ON);
 
     // install Button callback
     GPIO_setCallback(Board_GPIO_BUTTON0, gpioButtonFxn0);
@@ -97,9 +93,6 @@ int main(void)
  */
 void gpioButtonFxn0(uint_least8_t index)
 {
-    // Clear the GPIO interrupt and toggle an LED
-    GPIO_toggle(Board_GPIO_LED0);
-
     // send a button as a test in this interrupt for now
     if (IRbuttonReady() && !IRbuttonSending())
     {

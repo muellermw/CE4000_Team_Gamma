@@ -1,9 +1,9 @@
 /**
- * IR_Emitter.c
+ * IR_Emitter.h
  *
  * Authors: Max Kallenberger, Marcus Mueller
  *
- * Emitter is PIN 53. Need to change in CC3220SF_LaunchXL.c if you want to update.
+ * Emitter LED is on GPIO 9 (PIN 64) (which is where the PWM timer sends its signal)
  */
 
 #ifndef INC_IR_EMITTER_H_
