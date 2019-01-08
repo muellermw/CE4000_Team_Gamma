@@ -47,6 +47,7 @@
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
 #include "filesystem.h"
+#include "uart_term.h"
 
 void gpioButtonFxn0(uint_least8_t index);
 
@@ -83,6 +84,28 @@ int main(void)
     IR_Init_Receiver();
     IR_Init_Emitter();
 
+    // file system test code:
+    /*
+    ButtonTableEntry testEntry;
+    strncpy(testEntry.buttonName, "testButton", sizeof("testButton"));
+    testEntry.buttonIndex = 1;
+
+    int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
+    fsWriteFile(fd, 0, sizeof(ButtonTableEntry), &testEntry);
+    fsCloseFile(fd);
+    */
+
+    /*
+    int size = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+    ButtonTableEntry* testList = malloc(size);
+
+    int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
+    fsReadFile(fd, testList, 0, sizeof(ButtonTableEntry));
+
+    UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[0].buttonName, testList[0].buttonIndex);
+
+    free(testList);
+    */
 
     while (1) {}
 }

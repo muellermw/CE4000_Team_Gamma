@@ -32,15 +32,21 @@
 #include "Board.h"
 #include "uart_term.h"
 #include "wifi.h"
+#include "filesystem.h"
 
 // used to get file list information
 #define MAX_FILE_ENTRIES 4
+
 
 typedef struct
 {
  SlFileAttributes_t attribute;
  char fileName[SL_FS_MAX_FILE_NAME_LENGTH];
 } slGetfileList_t;
+
+
+static void initializeButtonTable();
+
 
 /**
  * This is a static debug function that prints flash storage file system info out to the UART
@@ -233,7 +239,7 @@ int fsGetFileSizeInBytes(const unsigned char* fileName)
     else
     {
         RetVal = fsFileInfo.Len;
-        UART_PRINT("File size: %d", RetVal);
+        UART_PRINT("File size: %d\n\r", RetVal);
     }
 
     return RetVal;
@@ -262,25 +268,18 @@ int fsCreateFile(const unsigned char* fileName, _u32 maxFileSize)
 /**
  * This method opens a file for reading OR writing (cannot do both at the same time)
  * @param  fileName the name of the file
- * @param  read set to 1 for reading, otherwise set to 0
- * @param  write set to 1 for writing, otherwise set to 0
+ * @param  fileOperation for reading or writing
  * @return the file descriptor if OK, else -1
  */
-int fsOpenFile(const unsigned char* fileName, _u8 read, _u8 write)
+int fsOpenFile(const unsigned char* fileName, flashOperation fileOp)
 {
     _u32 flags = 0;
 
-    if (read && write)
-    {
-        UART_PRINT("fsOpenFile error: Cannot open a file for both read and write...\n\r");
-        return -1;
-    }
-
-    if (read)
+    if (fileOp == flash_read)
     {
         flags |= SL_FS_READ;
     }
-    else if (write)
+    else
     {
         flags |= SL_FS_WRITE;
     }
@@ -305,7 +304,7 @@ int fsOpenFile(const unsigned char* fileName, _u8 read, _u8 write)
  * @param  buffer pointer to the data to write
  * @return the new offset if OK, else -1
  */
-int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, _const char *buffer)
+int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer)
 {
     int RetVal;
     // keep track of initial offset
@@ -331,7 +330,7 @@ int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, _const char *buffer)
 
     }
 
-    UART_PRINT("Wrote %d bytes...\n\r", offset);
+    UART_PRINT("Wrote %d bytes...\n\r", (offset - offsetStart));
     return offset;
 }
 
@@ -343,7 +342,7 @@ int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, _const char *buffer)
  * @param  length the amount of data to read from the file
  * @return the offset in the file that was read to if OK, else -1
  */
-int fsReadFile(_i32 fileHandle, char* buff, _u32 offset, _u32 length)
+int fsReadFile(_i32 fileHandle, void* buff, _u32 offset, _u32 length)
 {
     // keep track of initial offset
     int offsetStart = offset;
@@ -425,7 +424,32 @@ void filesystem_init()
     // These are static debug UART calls
     st_ShowStorageInfo();
     st_listFiles(250, 0);
+
+    // Get button table of contents set up
+    initializeButtonTable();
 }
+
+/**
+ * This method makes sure that the button table of contents
+ * exists, and creates it if it doesn't.
+ */
+static void initializeButtonTable()
+{
+    int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
+
+    // Check if the file descriptor is valid, if it is not, the file does not exist, so create it
+    if (fd == -1)
+    {
+        fd = fsCreateFile(BUTTON_TABLE_FILE, BUTTON_TABLE_FILE_MAX_SIZE);
+        fsCloseFile(fd);
+    }
+    else
+    {
+        // The file already exists, so go ahead and close it
+        fsCloseFile(fd);
+    }
+}
+
 
 /************************************************
  * These functions are required by the SDK and
