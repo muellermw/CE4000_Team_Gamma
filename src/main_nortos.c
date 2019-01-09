@@ -47,9 +47,13 @@
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
 #include "filesystem.h"
+
+#ifdef DEBUG_SESSION
 #include "uart_term.h"
+#endif
 
 void gpioButtonFxn0(uint_least8_t index);
+
 
 /*
  *  ======== main ========
@@ -84,25 +88,20 @@ int main(void)
     IR_Init_Receiver();
     IR_Init_Emitter();
 
+
     // file system test code:
-    /*
-    ButtonTableEntry testEntry;
-    strncpy(testEntry.buttonName, "testButton", sizeof("testButton"));
-    testEntry.buttonIndex = 1;
-
-    int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
-    fsWriteFile(fd, 0, sizeof(ButtonTableEntry), &testEntry);
-    fsCloseFile(fd);
-    */
 
     /*
-    int size = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
-    ButtonTableEntry* testList = malloc(size);
+    fsAddButtonTableEntry("testButton0");
 
-    int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
-    fsReadFile(fd, testList, 0, sizeof(ButtonTableEntry));
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+    ButtonTableEntry* testList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
 
-    UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[0].buttonName, testList[0].buttonIndex);
+    if (testList != NULL)
+    {
+        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[0].buttonName, testList[0].buttonIndex);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[1].buttonName, testList[1].buttonIndex);
+    }
 
     free(testList);
     */

@@ -30,22 +30,25 @@
 #include <string.h>
 #include <ti/drivers/net/wifi/simplelink.h>
 #include "Board.h"
-#include "uart_term.h"
 #include "wifi.h"
 #include "filesystem.h"
+
+#ifdef DEBUG_SESSION
+#include "uart_term.h"
+#endif
+
+static void initializeButtonTable();
+
+#ifdef DEBUG_SESSION
 
 // used to get file list information
 #define MAX_FILE_ENTRIES 4
 
-
 typedef struct
 {
- SlFileAttributes_t attribute;
- char fileName[SL_FS_MAX_FILE_NAME_LENGTH];
+    SlFileAttributes_t attribute;
+    char fileName[SL_FS_MAX_FILE_NAME_LENGTH];
 } slGetfileList_t;
-
-
-static void initializeButtonTable();
 
 
 /**
@@ -222,10 +225,12 @@ static _i32 st_listFiles(_i32 numOfFiles, int bPrintDescription)
     return retVal;
 }
 
+#endif /* DEBUG_SESSION */
+
 /**
  * This method retrieves the size of a specified file in bytes
  * @param  fileName the name of the file to get the size of
- * @return the size of the file if OK, else -1
+ * @return the size of the file if OK, else FILE_IO_ERROR
  */
 int fsGetFileSizeInBytes(const unsigned char* fileName)
 {
@@ -233,13 +238,17 @@ int fsGetFileSizeInBytes(const unsigned char* fileName)
     int RetVal = sl_FsGetInfo(fileName, 0, &fsFileInfo);
     if (RetVal != 0)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_FsGetInfo error: %d\n\r", RetVal);
-        RetVal = -1;
+#endif
+        RetVal = FILE_IO_ERROR;
     }
     else
     {
         RetVal = fsFileInfo.Len;
+#ifdef DEBUG_SESSION
         UART_PRINT("File size: %d\n\r", RetVal);
+#endif
     }
 
     return RetVal;
@@ -249,7 +258,7 @@ int fsGetFileSizeInBytes(const unsigned char* fileName)
  * This method attempts to create a file within the TI flash filesystem
  * @param  fileName the name of the file
  * @param  maxFileSize the maximum length of the file in bytes (defaults to 4096, but cannot be 0)
- * @return the file descriptor if OK, else -1
+ * @return the file descriptor if OK, else FILE_IO_ERROR
  */
 int fsCreateFile(const unsigned char* fileName, _u32 maxFileSize)
 {
@@ -258,8 +267,10 @@ int fsCreateFile(const unsigned char* fileName, _u32 maxFileSize)
     if(fd < 0)
     {
         // could not create file
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_FsOpen (Creation) error: %d\n\r", fd);
-        fd = -1;
+#endif
+        fd = FILE_IO_ERROR;
     }
 
     return fd;
@@ -269,7 +280,7 @@ int fsCreateFile(const unsigned char* fileName, _u32 maxFileSize)
  * This method opens a file for reading OR writing (cannot do both at the same time)
  * @param  fileName the name of the file
  * @param  fileOperation for reading or writing
- * @return the file descriptor if OK, else -1
+ * @return the file descriptor if OK, else FILE_IO_ERROR
  */
 int fsOpenFile(const unsigned char* fileName, flashOperation fileOp)
 {
@@ -289,8 +300,10 @@ int fsOpenFile(const unsigned char* fileName, flashOperation fileOp)
     if(fd < 0)
     {
         // could not open file
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_FsOpen error: %d\n\r", fd);
-        fd = -1;
+#endif
+        fd = FILE_IO_ERROR;
     }
 
     return fd;
@@ -302,7 +315,7 @@ int fsOpenFile(const unsigned char* fileName, flashOperation fileOp)
  * @param  offset the location in the file to start writing to
  * @param  length the amount of data to write to the file
  * @param  buffer pointer to the data to write
- * @return the new offset if OK, else -1
+ * @return the new offset if OK, else FILE_IO_ERROR
  */
 int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer)
 {
@@ -319,8 +332,10 @@ int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer)
                          length);
         if (RetVal <= 0)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("sl_FsWrite error:  %d\n\r" ,RetVal);
-            return -1;
+#endif
+            return FILE_IO_ERROR;
         }
         else
         {
@@ -329,8 +344,9 @@ int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer)
         }
 
     }
-
+#ifdef DEBUG_SESSION
     UART_PRINT("Wrote %d bytes...\n\r", (offset - offsetStart));
+#endif
     return offset;
 }
 
@@ -340,7 +356,7 @@ int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer)
  * @param  buff the buffer to fill with the read in data
  * @param  offset the offset in the file the start reading from
  * @param  length the amount of data to read from the file
- * @return the offset in the file that was read to if OK, else -1
+ * @return the offset in the file that was read to if OK, else FILE_IO_ERROR
  */
 int fsReadFile(_i32 fileHandle, void* buff, _u32 offset, _u32 length)
 {
@@ -358,21 +374,26 @@ int fsReadFile(_i32 fileHandle, void* buff, _u32 offset, _u32 length)
         }
         if(RetVal < 0)
         {   // Error
+#ifdef DEBUG_SESSION
             UART_PRINT("sl_FsRead error: %d\n\r", RetVal);
-            return -1;
+#endif
+            return FILE_IO_ERROR;
         }
 
         offset += RetVal;
         length -= RetVal;
     }
+
+#ifdef DEBUG_SESSION
     UART_PRINT("Read \"%s\" (%d bytes)...\n\r", buff, (offset - offsetStart));
+#endif
     return offset;
 }
 
 /**
  * This method attempts to close a file
  * @param  fileDescriptor file descriptor to close
- * @return 0 if OK, else -1
+ * @return 0 if OK, else FILE_IO_ERROR
  */
 int fsCloseFile(_i32 fileDescriptor)
 {
@@ -380,8 +401,10 @@ int fsCloseFile(_i32 fileDescriptor)
 
     if(fileDescriptor < 0)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_FsClose error: %d\n\r", RetVal);
-        RetVal = -1;
+#endif
+        RetVal = FILE_IO_ERROR;
     }
 
     return RetVal;
@@ -390,7 +413,7 @@ int fsCloseFile(_i32 fileDescriptor)
 /**
  * This method attempts to delete a file
  * @param  fileName file name to delete
- * @return 0 if OK, else -1
+ * @return 0 if OK, else FILE_IO_ERROR
  */
 int fsDeleteFile(const unsigned char* fileName)
 {
@@ -398,8 +421,10 @@ int fsDeleteFile(const unsigned char* fileName)
 
     if(RetVal < 0)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_FsDel error: %d\n\r", RetVal);
-        RetVal = -1;
+#endif
+        RetVal = FILE_IO_ERROR;
     }
 
     return RetVal;
@@ -419,14 +444,232 @@ void filesystem_init()
     // Powerup the CC3220SF Network Processor
     sl_Start(0, 0, 0);
 
-    // Device is awake (the exact role is not relevant for this example)
-    // and ready for processing FS commands.
-    // These are static debug UART calls
-    st_ShowStorageInfo();
-    st_listFiles(250, 0);
-
+    // Device is awake and ready for processing FS commands.
     // Get button table of contents set up
     initializeButtonTable();
+
+    // These are static debug UART calls
+#ifdef DEBUG_SESSION
+    st_ShowStorageInfo();
+    st_listFiles(250, 0);
+#endif
+}
+
+/**
+ * This method extracts the button entries from the button table contents file and returns
+ * them to the caller. This allows for button-index synchronization with the application.
+ * @param fileName the name of the button table file
+ * @param fileSize the size of the button table file in flash storage
+ * @return a pointer to the list of button table entries, or NULL if error
+ */
+ButtonTableEntry* fsRetrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize)
+{
+    ButtonTableEntry* buttonTableList = NULL;
+
+    // Check to see if the size is valid
+    if (fileSize >= (_u16)sizeof(ButtonTableEntry))
+    {
+        buttonTableList = malloc(fileSize);
+
+        // Check if the memory was successfully reserved
+        if (buttonTableList != NULL)
+        {
+            // Open the file for reading
+            int fd = fsOpenFile(fileName, flash_read);
+
+            if (fd != FILE_IO_ERROR)
+            {
+                fsReadFile(fd, buttonTableList, 0, fileSize);
+                fsCloseFile(fd);
+            }
+            else
+            {
+                free(buttonTableList);
+                buttonTableList = NULL;
+            }
+        }
+    }
+
+    return buttonTableList;
+}
+
+/**
+ * This method adds a button table entry by finding the next open index and writing it to the button table file
+ * @param buttonName the string name of the new button
+ * @return the index that the new button was assigned, or FILE_IO_ERROR if error
+ */
+int fsAddButtonTableEntry(const unsigned char* buttonName)
+{
+    // Default value for return value
+    int RetVal = FILE_IO_ERROR;
+    _u32 buttonIndex;
+    ButtonTableEntry newButton;
+
+    // Get the size of the file so we know how many entries we need to go through
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+
+    if (fileSize != FILE_IO_ERROR)
+    {
+        // If the file contains at least one button table entry
+        if (fileSize >= (_u16)sizeof(ButtonTableEntry))
+        {
+            _u32 numEntries = fileSize/sizeof(ButtonTableEntry);
+
+            // Get the button table list so we can check which index to assign the new button
+            ButtonTableEntry* buttonTableList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
+
+            // Check that the list is valid
+            if (buttonTableList != NULL)
+            {
+                // Go through each existing entry and find an empty spot to write the new button name and index.
+                // The index is decided automatically based on the position of the blank memory offset (starts at zero)
+                for (buttonIndex = 0; buttonIndex < numEntries; buttonIndex++)
+                {
+                    // Check if the first character of the entry button name is NULL or 0xFF (depends on how the chip clears memory)
+                    if ((buttonTableList[buttonIndex].buttonName[0] == NULL) || (buttonTableList[buttonIndex].buttonName[0] == 0xFF))
+                    {
+                        // We have found a valid place to put the new button! Break out
+                        break;
+                    }
+                }
+
+                // Create the new button entry
+                initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
+                strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+                newButton.buttonIndex = buttonIndex;
+
+                // At this point we have the full list of button entries and their locations. Opening a file for write means
+                // we need to completely rewrite the entire file, but this is OK since we have all of the data
+                int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
+                if (fd != FILE_IO_ERROR)
+                {
+                    // Create the new list in memory before writing it to storage
+                    // Check if the list has a blank spot and can stay the same size
+                    if (buttonIndex < numEntries)
+                    {
+                        memcpy(&buttonTableList[buttonIndex], &newButton, sizeof(ButtonTableEntry));
+
+                        // Write the updated list
+                        fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*numEntries), buttonTableList);
+                    }
+                    // We must make the list one button table entry larger
+                    else
+                    {
+                        ButtonTableEntry newTable[numEntries+1];
+
+                        // Copy the entire existing button table list into the new list
+                        memcpy(&newTable, buttonTableList, sizeof(ButtonTableEntry)*numEntries);
+
+                        // Copy the new button entry to the end of the new list
+                        memcpy(&newTable[buttonIndex], &newButton, sizeof(ButtonTableEntry));
+
+                        // Write the new list
+                        fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*(numEntries+1)), &newTable);
+                    }
+                    // Done writing, close the button table file
+                    fsCloseFile(fd);
+
+                    RetVal = buttonIndex;
+                }
+
+                free(buttonTableList);
+            }
+        }
+        // If we get here that means that the file size is likely 0 and has no entries
+        else
+        {
+            // Make this entry the first (0th) entry
+            buttonIndex = 0;
+
+            // Create the new button entry
+            initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
+            strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+            newButton.buttonIndex = buttonIndex;
+
+            int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
+            if (fd != FILE_IO_ERROR)
+            {
+                // Write the new entry
+                fsWriteFile(fd, 0, sizeof(ButtonTableEntry), (void*)&newButton);
+
+                // Done writing, close the button table file
+                fsCloseFile(fd);
+
+                RetVal = buttonIndex;
+            }
+        }
+    }
+
+    return RetVal;
+}
+
+/**
+ * This method clears the memory location of a button entry in the
+ * button table entry at the index provided so it can be repopulated later
+ * @param buttonIndex the index to clear the memory in the button table file
+ * @return 0 if OK, else FILE_IO_ERROR
+ */
+int fsDeleteButtonTableEntry(_u16 buttonIndex)
+{
+    // Default value
+    int RetVal = FILE_IO_ERROR;
+
+    // Get the size of the file so we know how many entries we need to go through
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+
+    // Check that the size of the button table file was found
+    if (fileSize != FILE_IO_ERROR)
+    {
+        _u32 numEntries = fileSize/sizeof(ButtonTableEntry);
+
+        // Check if the button index is within the bounds of the file contents,
+        // if it is the same or greater than the number of entries it is invalid
+        if (numEntries > buttonIndex)
+        {
+            // Get the button table list so we can clear the given index
+            ButtonTableEntry* buttonTableList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
+
+            // Check that the list is valid
+            if (buttonTableList != NULL)
+            {
+                int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
+                if (fd != FILE_IO_ERROR)
+                {
+                    // Check to see if the button being deleted is the last button in the list,
+                    // if so, don't even bother writing it to the file
+                    if ((numEntries > 1) && (buttonIndex == numEntries-1))
+                    {
+                        fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*(numEntries-1)), buttonTableList);
+                    }
+                    else
+                    {
+                        // We are clear to erase the button index in memory
+                        memset(&buttonTableList[buttonIndex], NULL, sizeof(ButtonTableEntry));
+                        fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*numEntries), buttonTableList);
+                    }
+                    // Done writing, close the button table file
+                    fsCloseFile(fd);
+
+                    // Give an OK error condition
+                    RetVal = 0;
+                }
+
+                free(buttonTableList);
+            }
+        }
+    }
+
+    return RetVal;
+}
+
+/**
+ * Helper function to set the memory of a new button entry all to 0
+ * @param newButton the button table entry to initialize
+ */
+void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize)
+{
+    memset(newButton->buttonName, NULL, buttonNameMaxSize);
+    newButton->buttonIndex = 0;
 }
 
 /**
@@ -438,7 +681,7 @@ static void initializeButtonTable()
     int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
 
     // Check if the file descriptor is valid, if it is not, the file does not exist, so create it
-    if (fd == -1)
+    if (fd == FILE_IO_ERROR)
     {
         fd = fsCreateFile(BUTTON_TABLE_FILE, BUTTON_TABLE_FILE_MAX_SIZE);
         fsCloseFile(fd);
@@ -458,47 +701,53 @@ static void initializeButtonTable()
 
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 {
+#ifdef DEBUG_SESSION
     UART_PRINT("pWlanEvent->Id=%d\n\r", pWlanEvent->Id);
+#endif
 }
 
 void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *slFatalErrorEvent)
 {
+#ifdef DEBUG_SESSION
     UART_PRINT("slFatalErrorEvent->Id=%d\n\r", slFatalErrorEvent->Id);
+#endif
 }
 
 void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *pDevEvent)
 {
+#ifdef DEBUG_SESSION
      UART_PRINT("pDevEvent->Id=%d\n\r", pDevEvent->Id);
+#endif
 }
 
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 {
-    /* Unused in this application */
+    /* Unused in this application for now */
 }
 
 void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
 {
-    /* Unused in this application */
+    /* Unused in this application for now */
 }
 
 void SimpleLinkHttpServerEventHandler(SlNetAppHttpServerEvent_t *pHttpEvent,
                                       SlNetAppHttpServerResponse_t *pHttpResponse)
 {
-    /* Unused in this application */
+    /* Unused in this application for now */
 }
 
 void SimpleLinkNetAppRequestMemFreeEventHandler (uint8_t *buffer)
 {
-    /* Unused in this application */
+    /* Unused in this application for now */
 }
 
 void SimpleLinkNetAppRequestEventHandler (SlNetAppRequest_t *pNetAppRequest,
                                           SlNetAppResponse_t *pNetAppResponse)
 {
-    /* Unused in this application */
+    /* Unused in this application for now */
 }
 
 void SimpleLinkSocketTriggerEventHandler(SlSockTriggerEvent_t *pSockTriggerEvent)
 {
-
+    /* Unused in this application for now */
 }

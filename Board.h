@@ -41,6 +41,9 @@ extern "C" {
 
 #include "CC3220SF_LAUNCHXL.h"
 
+// This is for UART output when debug support is needed
+#define DEBUG_SESSION
+
 #define Board_initGeneral            CC3220SF_LAUNCHXL_initGeneral
 
 #define Board_ADC0                   CC3220SF_LAUNCHXL_ADC0
