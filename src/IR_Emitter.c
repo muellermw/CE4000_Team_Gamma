@@ -100,6 +100,7 @@ void IRoneShotTimerHandler(Timer_Handle handle)
     {
         IRstopPWMtimer();
         sendingButton = false;
+        free(currentOutputSequence);
     }
 }
 

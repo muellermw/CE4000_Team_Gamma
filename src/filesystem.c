@@ -635,16 +635,18 @@ int fsAddButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFre
                             // We must make the list one button table entry larger
                             else
                             {
-                                ButtonTableEntry newTable[numAllocatedEntries+1];
+                                ButtonTableEntry* newTable = malloc(sizeof(ButtonTableEntry)*(numAllocatedEntries+1));
 
                                 // Copy the entire existing button table list into the new list
-                                memcpy(&newTable, buttonTableList, sizeof(ButtonTableEntry)*numAllocatedEntries);
+                                memcpy(newTable, buttonTableList, sizeof(ButtonTableEntry)*numAllocatedEntries);
 
                                 // Copy the new button entry to the end of the new list
                                 memcpy(&newTable[buttonIndex], &newButton, sizeof(ButtonTableEntry));
 
                                 // Write the new list
-                                fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*(numAllocatedEntries+1)), &newTable);
+                                fsWriteFile(fd, 0, (sizeof(ButtonTableEntry)*(numAllocatedEntries+1)), newTable);
+
+                                free(newTable);
                             }
                             // Done writing, close the button table file
                             fsCloseFile(fd);

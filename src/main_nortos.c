@@ -57,6 +57,8 @@ void gpioButtonFxnSW2(uint_least8_t index);
 void gpioButtonFxnSW3(uint_least8_t index);
 
 bool emitterReady = false;
+bool mainSendButton = false;
+bool mainDeleteButton = false;
 
 /*
  *  ======== main ========
@@ -104,11 +106,11 @@ int main(void)
 
     //fsDeleteFile(BUTTON_TABLE_FILE);
     /*
-    fsAddButtonTableEntry("testButton0");
-    fsAddButtonTableEntry("testButton1");
-    fsAddButtonTableEntry("testButton2");
+    fsAddButtonTableEntry("testButton0", 38000);
+    fsAddButtonTableEntry("testButton1", 56000);
+    fsAddButtonTableEntry("testButton2", 34000);
     fsDeleteButtonTableEntry(1);
-    fsAddButtonTableEntry("testButton1");
+    fsAddButtonTableEntry("testButton1", 60000);
 
     int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
     ButtonTableEntry* testList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
@@ -117,9 +119,9 @@ int main(void)
     if (testList != NULL)
     {
         UART_PRINT("Valid entries: %d\r\n", numValidEntries);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[0].buttonName, testList[0].buttonIndex);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[1].buttonName, testList[1].buttonIndex);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[2].buttonName, testList[2].buttonIndex);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[0].buttonName, testList[0].buttonIndex, testList[0].irCarrierFrequency);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[1].buttonName, testList[1].buttonIndex, testList[1].irCarrierFrequency);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[2].buttonName, testList[2].buttonIndex, testList[2].irCarrierFrequency);
     }
 
     free(testList);
@@ -135,6 +137,31 @@ int main(void)
 
             emitterReady = true;
         }
+
+        if (mainDeleteButton == true)
+        {
+            fsDeleteFile("Button0");
+            fsDeleteButtonTableEntry(0);
+            mainDeleteButton = false;
+
+            emitterReady = false;
+        }
+
+        if (mainSendButton == true)
+        {
+            int fd = fsOpenFile("Button0", flash_read);
+            int fileSize = fsGetFileSizeInBytes("Button0");
+            SignalInterval* irSignal = malloc(fileSize);
+            fsReadFile(fd, irSignal, 0, fileSize);
+            fsCloseFile(fd);
+
+            int tableSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+            ButtonTableEntry* buttonTable = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, tableSize);
+
+            IRemitterSendButton(irSignal, buttonTable[0].irCarrierFrequency);
+
+            mainSendButton = false;
+        }
     }
 }
 
@@ -147,7 +174,7 @@ int main(void)
 void gpioButtonFxnSW2(uint_least8_t index)
 {
     // Delete the first button file
-    fsDeleteFile("Button0");
+    mainDeleteButton = true;
 }
 
 /**
@@ -159,6 +186,6 @@ void gpioButtonFxnSW3(uint_least8_t index)
     // send a button as a test in this interrupt for now
     if (emitterReady && !IRbuttonSending())
     {
-        IRemitterSendButton(getIRsequence(), getIRcarrierFrequency());
+        mainSendButton = true;
     }
 }
