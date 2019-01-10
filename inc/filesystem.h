@@ -40,6 +40,8 @@ int fsCloseFile(_i32 fileDescriptor);
 int fsDeleteFile(const unsigned char* fileName);
 int fsAddButtonTableEntry(const unsigned char* buttonName);
 int fsDeleteButtonTableEntry(_u16 buttonIndex);
+int fsFindNumButtonEntries(ButtonTableEntry* entryList, _u32 fileSize);
+bool fsCheckFileExists(const unsigned char* fileName);
 void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 ButtonTableEntry* fsRetrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 

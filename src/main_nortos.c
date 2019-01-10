@@ -91,16 +91,24 @@ int main(void)
 
     // file system test code:
 
+    //fsDeleteFile(BUTTON_TABLE_FILE);
     /*
     fsAddButtonTableEntry("testButton0");
+    fsAddButtonTableEntry("testButton1");
+    fsAddButtonTableEntry("testButton2");
+    fsDeleteButtonTableEntry(1);
+    fsAddButtonTableEntry("testButton1");
 
     int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
     ButtonTableEntry* testList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
+    int numValidEntries = fsFindNumButtonEntries(testList, fileSize);
 
     if (testList != NULL)
     {
+        UART_PRINT("Valid entries: %d\r\n", numValidEntries);
         UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[0].buttonName, testList[0].buttonIndex);
         UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[1].buttonName, testList[1].buttonIndex);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\n", testList[2].buttonName, testList[2].buttonIndex);
     }
 
     free(testList);

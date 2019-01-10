@@ -9,13 +9,14 @@
 #include <ti/drivers/Capture.h>
 #include <ti/drivers/GPIO.h>
 #include <stdlib.h>
-#include <Signal_Interval.h>
+#include <string.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #include "Board.h"
+#include "Signal_Interval.h"
 #include "IR_Receiver.h"
 #include "IR_Emitter.h"
-#include "forwardLinkedList.h"
 
 void IRinitSignalCapture();
 void IRstartSignalCapture();
@@ -29,7 +30,6 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
 static void ConvertToUs(SignalInterval *seq, uint32_t length);
 
 Receiver_Mode receiverState;
-static struct linkedList* test;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
 static SignalInterval sequence[MAX_INDEX];
@@ -45,9 +45,6 @@ static bool buttonCaptured = false;
  */
 void IR_Init_Receiver()
 {
-    test = malloc(sizeof(struct linkedList));
-    fll_init(test);
-
     receiverState = program;
     // make sure the sequence array is initialized to zero
     memset(&sequence[0], 0, sizeof(sequence));

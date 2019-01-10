@@ -1,5 +1,5 @@
 /*
- * Signal_Edge.h
+ * Signal_Interval.h
  *
  *  Created on: Dec 11, 2018
  *      Author: Max Kallenberger
