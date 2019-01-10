@@ -32,7 +32,7 @@ static void ConvertToUs(SignalInterval *seq, uint32_t length);
 Receiver_Mode receiverState;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
-static SignalInterval sequence[MAX_INDEX];
+static SignalInterval sequence[MAX_SEQUENCE_INDEX];
 static SignalInterval currentInt;
 static uint16_t edgeCnt = 0;
 static uint16_t frequency = 0;
@@ -46,6 +46,7 @@ static bool buttonCaptured = false;
 void IR_Init_Receiver()
 {
     receiverState = program;
+
     // make sure the sequence array is initialized to zero
     memset(&sequence[0], 0, sizeof(sequence));
     IRinitSignalCapture();
@@ -84,7 +85,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         currentInt.time_us = 0;
         currentInt.PWM = true;
     }
-    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_INDEX) || (seqIndex == -2)){
+    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_SEQUENCE_INDEX) || (seqIndex == -2)){
         IRstopSignalCapture();
         seqIndex--;
         (sequence[seqIndex]).time_us = 0;
@@ -214,12 +215,14 @@ uint16_t getIRcarrierFrequency()
 
 bool IRbuttonReady()
 {
-    return buttonCaptured;
+    bool RetVal = buttonCaptured;
+    buttonCaptured = false;
+    return RetVal;
 }
 
 static void ConvertToUs(SignalInterval *seq, uint32_t length){
-    if(length >= MAX_INDEX){
-        length = MAX_INDEX;
+    if(length >= MAX_SEQUENCE_INDEX){
+        length = MAX_SEQUENCE_INDEX;
     }
     for(int i = 0; i < length; i++){
         (seq[i]).time_us = ((seq[i]).time_us / 10000);

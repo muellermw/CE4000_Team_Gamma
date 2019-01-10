@@ -432,6 +432,52 @@ int fsDeleteFile(const unsigned char* fileName)
 }
 
 /**
+ * Save an IR button sequence to flash and its corresponding entry to the button table file
+ * @param buttonName the name to save to the button table file
+ * @param buttonCarrierFrequency the carrier frequency of the IR signal
+ * @param buttonSequence the IR sequence to store in its own file
+ * @param sequenceSize the size of the IR sequence in bytes
+ * @return 0 if OK, else FILE_IO_ERROR
+ */
+int fsSaveButton(const unsigned char* buttonName, _u16 buttonCarrierFrequency, SignalInterval* buttonSequence, _u16 sequenceSize)
+{
+    int RetVal = FILE_IO_ERROR;
+
+    if (buttonName != NULL && buttonSequence != NULL)
+    {
+        int buttonIndex = fsAddButtonTableEntry(buttonName, buttonCarrierFrequency);
+
+        // Check if a valid index has been returned
+        if (buttonIndex >= 0 && buttonIndex <= MAX_AMOUNT_OF_BUTTONS)
+        {
+            char sequenceFileName[BUTTON_FILE_NAME_MAX_SIZE];
+            memset(sequenceFileName, NULL, BUTTON_FILE_NAME_MAX_SIZE);
+
+            // Form the new file name string
+            snprintf(sequenceFileName, BUTTON_FILE_NAME_MAX_SIZE, "Button%d", buttonIndex);
+
+            int fd = fsCreateFile((const unsigned char*)sequenceFileName, sequenceSize);
+
+            // Check if the file descriptor is valid
+            if (fd != FILE_IO_ERROR)
+            {
+                // Write the sequence into storage
+                fsWriteFile(fd, 0, sequenceSize, buttonSequence);
+                fsCloseFile(fd);
+                RetVal = 0;
+            }
+            // Something went seriously wrong, revert what was written
+            else
+            {
+                fsDeleteButtonTableEntry(buttonIndex);
+            }
+        }
+    }
+
+    return RetVal;
+}
+
+/**
  * This function finds out if the given file exists in the file system
  * @param fileName the file to check
  * @return true if the file exists, false if not
@@ -517,9 +563,10 @@ ButtonTableEntry* fsRetrieveButtonTableContents(const unsigned char* fileName, _
 /**
  * This function adds a button table entry by finding the next open index and writing it to the button table file
  * @param buttonName the string name of the new button
+ * @param buttonCarrierFrequency the carrier frequency of the IR signal
  * @return the index that the new button was assigned, or FILE_IO_ERROR if error
  */
-int fsAddButtonTableEntry(const unsigned char* buttonName)
+int fsAddButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequency)
 {
     // Default value for return value
     int RetVal = FILE_IO_ERROR;
@@ -568,6 +615,7 @@ int fsAddButtonTableEntry(const unsigned char* buttonName)
                         // Create the new button entry
                         initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
                         strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+                        newButton.irCarrierFrequency = buttonCarrierFrequency;
                         newButton.buttonIndex = buttonIndex;
 
                         // At this point we have the full list of button entries and their locations. Opening a file for write means
@@ -619,6 +667,7 @@ int fsAddButtonTableEntry(const unsigned char* buttonName)
             // Create the new button entry
             initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
             strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+            newButton.irCarrierFrequency = buttonCarrierFrequency;
             newButton.buttonIndex = buttonIndex;
 
             int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
@@ -730,10 +779,12 @@ int fsFindNumButtonEntries(ButtonTableEntry* entryList, _u32 fileSize)
 /**
  * Helper function to set the memory of a new button entry all to 0
  * @param newButton the button table entry to initialize
+ * @param buttonNameMaxSize The maximum size of the button name string
  */
 void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize)
 {
     memset(newButton->buttonName, NULL, buttonNameMaxSize);
+    newButton->irCarrierFrequency = 0;
     newButton->buttonIndex = 0;
 }
 

@@ -46,14 +46,17 @@
 #include "Board.h"
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
+#include "Signal_Interval.h"
 #include "filesystem.h"
 
 #ifdef DEBUG_SESSION
 #include "uart_term.h"
 #endif
 
-void gpioButtonFxn0(uint_least8_t index);
+void gpioButtonFxnSW2(uint_least8_t index);
+void gpioButtonFxnSW3(uint_least8_t index);
 
+bool emitterReady = false;
 
 /*
  *  ======== main ========
@@ -73,19 +76,27 @@ int main(void)
     GPIO_init();
 
     // Configure the button pins
-    GPIO_setConfig(Board_GPIO_BUTTON0, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
-    GPIO_setConfig(Board_GPIO_BUTTON1, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
+    GPIO_setConfig(Board_GPIO_BUTTON_SW2, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
+    GPIO_setConfig(Board_GPIO_BUTTON_SW3, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
 
     // install Button callback
-    GPIO_setCallback(Board_GPIO_BUTTON0, gpioButtonFxn0);
-    GPIO_setCallback(Board_GPIO_BUTTON1, gpioButtonFxn0);
+    GPIO_setCallback(Board_GPIO_BUTTON_SW2, gpioButtonFxnSW2);
+    GPIO_setCallback(Board_GPIO_BUTTON_SW3, gpioButtonFxnSW3);
 
     // Enable interrupts
-    GPIO_enableInt(Board_GPIO_BUTTON0);
-    GPIO_enableInt(Board_GPIO_BUTTON1);
+    GPIO_enableInt(Board_GPIO_BUTTON_SW2);
+    GPIO_enableInt(Board_GPIO_BUTTON_SW3);
 
     // Initialize IR control
-    IR_Init_Receiver();
+    if (fsCheckFileExists("Button0") == false)
+    {
+        IR_Init_Receiver();
+    }
+    else
+    {
+        emitterReady = true;
+    }
+
     IR_Init_Emitter();
 
 
@@ -114,17 +125,39 @@ int main(void)
     free(testList);
     */
 
-    while (1) {}
+    while (1)
+    {
+        if (IRbuttonReady())
+        {
+            // Create the button file
+            SignalInterval* irSignal = getIRsequence();
+            fsSaveButton("TestButton0", getIRcarrierFrequency(), irSignal, MAX_SEQUENCE_INDEX*sizeof(SignalInterval));
+
+            emitterReady = true;
+        }
+    }
+}
+
+
+
+/**
+ *  ======== gpioButtonFxnSW2 ========
+ *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON_SW2
+ */
+void gpioButtonFxnSW2(uint_least8_t index)
+{
+    // Delete the first button file
+    fsDeleteFile("Button0");
 }
 
 /**
- *  ======== gpioButtonFxn0 ========
- *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON0.
+ *  ======== gpioButtonFxnSW3 ========
+ *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON_SW3
  */
-void gpioButtonFxn0(uint_least8_t index)
+void gpioButtonFxnSW3(uint_least8_t index)
 {
     // send a button as a test in this interrupt for now
-    if (IRbuttonReady() && !IRbuttonSending())
+    if (emitterReady && !IRbuttonSending())
     {
         IRemitterSendButton(getIRsequence(), getIRcarrierFrequency());
     }

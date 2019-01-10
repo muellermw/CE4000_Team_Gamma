@@ -12,7 +12,7 @@
 #include "IR_Emitter.h"
 
 #define CAPTURE_MAX_US 16777215 //(2^24-1)
-#define MAX_INDEX 128 //7250
+#define MAX_SEQUENCE_INDEX 128 //7250
 
 typedef enum
 {
