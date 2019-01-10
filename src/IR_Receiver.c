@@ -58,7 +58,10 @@ void IR_Init_Receiver()
 
 /**
  *  ======== IRedgeDetectionPassthrough ========
- *  Callback function for the capture timer edge interrupt
+ *  Callback function for the GPIO edge interrupt
+ *
+ *  This function reads the edge input edge from the IR receiver and duplicates the response
+ *  on the IR Emitter GPIO pin.
  */
 void IRedgeDetectionPassthrough(uint_least8_t index)
 {
@@ -76,47 +79,91 @@ void IRedgeDetectionPassthrough(uint_least8_t index)
 /**
  *  ======== IRedgeProgramButton ========
  *  Callback function for the capture timer learning interrupt
+ *
+ *  This function is used the record an IR signal sent from a remote and
+ *  store it into the pre-allocated array, sequence. It detects the carry frequency
+ *  and records times corresponding to pulses of PWM input and silence. This implementation
+ *  assumes a maximum signal length of 125ms. It also assumes no signal will have a
+ *  pulse of silence greater than 20ms. Times are recorded in 1E-10 seconds and
+ *  later converted to microseconds. The maximum period between edges during
+ *  PWM pulses is assumed to be less than 25us.
+ *
+ *  @param interval     This is the period between edges in clock ticks
  */
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 {
+    // Interval is in clock ticks, and each tick is 125E-10s
     interval = interval * 125;
+
+    // Need to ignore the first edge detected because the interval
+    // does not hold relevant information.
     if(seqIndex == -1){
+        // Update index and ensure variables are prepared to
+        // record data.
         seqIndex++;
         currentInt.time_us = 0;
         currentInt.PWM = true;
     }
+
+    // If the signal has exceeded the time limit, the end of the array has been reached, or
+    // a sufficiently long silent pulse has been found, stop recording the signal.
     else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_SEQUENCE_INDEX) || (seqIndex == -2)){
         IRstopSignalCapture();
+
+        // Since the final index recorded is guaranteed to be a silence,
+        // update the time to 0us to prevent the IR Emitter from outputting it
+        // unnecessarily.
         seqIndex--;
         (sequence[seqIndex]).time_us = 0;
+
+        // Convert the 1E-10s that were recorded to microseconds
         ConvertToUs(sequence, seqIndex);
+
+        // Reset variables for next capture
         seqIndex = -1;
         totalCaptureTime = 0;
         edgeCnt = 0;
         buttonCaptured = true;
     }
+
+    // Either need add accumulated time or record the data
     else{
+        // If a frequency has not been calculated, count the number of edges detected
         if(frequency == 0){
             edgeCnt++;
         }
+
+        // Record the total capture time to ensure maximum signal length is not exceeded
         totalCaptureTime += interval;
+
+        // If the time between edges is less than the maximum PWM half period
+        // add the time to calculate the PWM pulse length
         if(interval <= 250000){
             currentInt.time_us += interval;
         }
+
+        // Otherwise, a silent pulse has been detected, and both pulses
+        // must be recorded
         else{
+            // Calculate the average frequency from the first PWM pulse
             if(frequency == 0){
                 edgeCnt--;
                 uint32_t period_us = (currentInt.time_us*2);
                 frequency = (10000000000*edgeCnt)/period_us;
             }
+            // Record the PWM pulse
             sequence[seqIndex] = currentInt;
+            // Record the silent pulse
             seqIndex++;
             currentInt.time_us = interval;
             currentInt.PWM = false;
             sequence[seqIndex] = currentInt;
+            // Reset variables to receiver more pulses
             seqIndex++;
             currentInt.time_us = 0;
             currentInt.PWM = true;
+            // If the silent pulse was longer than the maximum allowed gap,
+            // assume the sequence ended, and a duplicate signal is next
             if(interval >= 200000000){
                 seqIndex = -2;
             }
@@ -220,10 +267,19 @@ bool IRbuttonReady()
     return RetVal;
 }
 
+/**
+ * This function converts an IR sequence recorded in 1E-10s to micr5osecond times
+ *
+ * @param seq This is the array of pulse times.
+ * @param length This is the amount of pulses in the array.
+ */
 static void ConvertToUs(SignalInterval *seq, uint32_t length){
+    // Check to length to prevent index out of bounds
     if(length >= MAX_SEQUENCE_INDEX){
         length = MAX_SEQUENCE_INDEX;
     }
+
+    // Convert 1E-10s to microseconds
     for(int i = 0; i < length; i++){
         (seq[i]).time_us = ((seq[i]).time_us / 10000);
     }
