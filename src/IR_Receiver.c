@@ -93,11 +93,11 @@ void IRedgeDetectionPassthrough(uint_least8_t index)
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 {
     // Interval is in clock ticks, and each tick is 125E-10s
-    interval = interval * 125;
+    interval = interval * TIME_PER_TICK;
 
     // Need to ignore the first edge detected because the interval
     // does not hold relevant information.
-    if(seqIndex == -1){
+    if(seqIndex == RESET_INDEX){
         // Update index and ensure variables are prepared to
         // record data.
         seqIndex++;
@@ -107,7 +107,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 
     // If the signal has exceeded the time limit, the end of the array has been reached, or
     // a sufficiently long silent pulse has been found, stop recording the signal.
-    else if((totalCaptureTime >= 1250000000) || (seqIndex >= MAX_SEQUENCE_INDEX) || (seqIndex == -2)){
+    else if((totalCaptureTime >= MAXIMUM_SEQUENCE_TIME) || (seqIndex >= MAX_SEQUENCE_INDEX) || (seqIndex == END_SEQUENCE_INDEX)){
         IRstopSignalCapture();
 
         // Since the final index recorded is guaranteed to be a silence,
@@ -120,7 +120,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
         ConvertToUs(sequence, seqIndex);
 
         // Reset variables for next capture
-        seqIndex = -1;
+        seqIndex = RESET_INDEX;
         totalCaptureTime = 0;
         edgeCnt = 0;
         buttonCaptured = true;
@@ -138,7 +138,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 
         // If the time between edges is less than the maximum PWM half period
         // add the time to calculate the PWM pulse length
-        if(interval <= 250000){
+        if(interval <= PWM_GAP){
             currentInt.time_us += interval;
         }
 
@@ -148,8 +148,10 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             // Calculate the average frequency from the first PWM pulse
             if(frequency == 0){
                 edgeCnt--;
+                // Rather than divide edges by 2 to get # of periods
+                // multiply time by 2 for efficiency
                 uint32_t period_us = (currentInt.time_us*2);
-                frequency = (10000000000*edgeCnt)/period_us;
+                frequency = (E_10S_TO_SEC_SCALAR*edgeCnt)/period_us;
             }
             // Record the PWM pulse
             sequence[seqIndex] = currentInt;
@@ -164,8 +166,8 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             currentInt.PWM = true;
             // If the silent pulse was longer than the maximum allowed gap,
             // assume the sequence ended, and a duplicate signal is next
-            if(interval >= 200000000){
-                seqIndex = -2;
+            if(interval >= END_SEQUENCE_TIME){
+                seqIndex = END_SEQUENCE_INDEX;
             }
         }
     }
@@ -281,6 +283,6 @@ static void ConvertToUs(SignalInterval *seq, uint32_t length){
 
     // Convert 1E-10s to microseconds
     for(int i = 0; i < length; i++){
-        (seq[i]).time_us = ((seq[i]).time_us / 10000);
+        (seq[i]).time_us = ((seq[i]).time_us / E_10S_TO_US_SCALAR);
     }
 }

@@ -13,6 +13,15 @@
 
 #define CAPTURE_MAX_US 16777215 //(2^24-1)
 #define MAX_SEQUENCE_INDEX 128 //7250
+#define TIME_PER_TICK 125 // 125E-10s
+#define RESET_INDEX -1
+#define MAXIMUM_SEQUENCE_TIME 1250000000 // 125ms
+#define END_SEQUENCE_INDEX -2
+#define END_SEQUENCE_TIME 200000000 // 20ms between edges
+#define PWM_GAP 250000 // 25us between PWM edges
+#define E_10S_TO_SEC_SCALAR 10000000000 // E-10 to seconds
+#define E_10S_TO_US_SCALAR 10000 // E-10 to microseconds
+
 
 typedef enum
 {
