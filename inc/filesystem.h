@@ -12,20 +12,7 @@
 #include <ti/drivers/net/wifi/simplelink.h>
 #include "Signal_Interval.h"
 
-#define BUTTON_TABLE_FILE "table_of_buttons"
-#define BUTTON_TABLE_FILE_MAX_SIZE (_u32)8192
-#define BUTTON_SINGLE_FILE_MAX_SIZE (_u32)1024
-#define BUTTON_NAME_MAX_SIZE 32
-#define BUTTON_FILE_NAME_MAX_SIZE 10 // biggest value is "Button220"
-#define MAX_AMOUNT_OF_BUTTONS 220
 #define FILE_IO_ERROR -77 // arbitrary value (can reassign, but keep negative)
-
-typedef struct
-{
-    char buttonName[BUTTON_NAME_MAX_SIZE];
-    _u16 irCarrierFrequency;
-    _u16 buttonIndex;
-} ButtonTableEntry;
 
 typedef enum
 {
@@ -41,12 +28,6 @@ int fsReadFile(_i32 fileHandle, void* buff, _u32 offset, _u32 length);
 int fsWriteFile(_i32 fileHandle, _u32 offset, _u32 length, const void* buffer);
 int fsCloseFile(_i32 fileDescriptor);
 int fsDeleteFile(const unsigned char* fileName);
-int fsSaveButton(const unsigned char* buttonName, _u16 buttonCarrierFrequency, SignalInterval* buttonSequence, _u16 sequenceSize);
-int fsAddButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequency);
-int fsDeleteButtonTableEntry(_u16 buttonIndex);
-int fsFindNumButtonEntries(ButtonTableEntry* entryList, _u32 fileSize);
 bool fsCheckFileExists(const unsigned char* fileName);
-void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
-ButtonTableEntry* fsRetrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 
 #endif /* INC_FILESYSTEM_H_ */

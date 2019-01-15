@@ -48,6 +48,7 @@
 #include "IR_Receiver.h"
 #include "Signal_Interval.h"
 #include "filesystem.h"
+#include "button.h"
 
 #ifdef DEBUG_SESSION
 #include "uart_term.h"
@@ -73,6 +74,9 @@ int main(void)
 
     // Enable the file system NVS driver
     filesystem_init();
+
+    // Start the button subsystem that utilizes the file system
+    button_init();
 
     // Call driver init functions
     GPIO_init();
@@ -133,15 +137,14 @@ int main(void)
         {
             // Create the button file
             SignalInterval* irSignal = getIRsequence();
-            fsSaveButton("TestButton0", getIRcarrierFrequency(), irSignal, MAX_SEQUENCE_INDEX*sizeof(SignalInterval));
+            createButton("TestButton0", getIRcarrierFrequency(), irSignal, MAX_SEQUENCE_INDEX*sizeof(SignalInterval));
 
             emitterReady = true;
         }
 
         if (mainDeleteButton == true)
         {
-            fsDeleteFile("Button0");
-            fsDeleteButtonTableEntry(0);
+            deleteButton(0);
             mainDeleteButton = false;
 
             emitterReady = false;
@@ -149,16 +152,17 @@ int main(void)
 
         if (mainSendButton == true)
         {
-            int fd = fsOpenFile("Button0", flash_read);
-            int fileSize = fsGetFileSizeInBytes("Button0");
-            SignalInterval* irSignal = malloc(fileSize);
-            fsReadFile(fd, irSignal, 0, fileSize);
-            fsCloseFile(fd);
+            SignalInterval* irSignal = getButtonSignalInterval(0);
 
-            int tableSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
-            ButtonTableEntry* buttonTable = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, tableSize);
+            if (irSignal != NULL)
+            {
+                int carrierFrequency = getButtonCarrierFrequency(0);
 
-            IRemitterSendButton(irSignal, buttonTable[0].irCarrierFrequency);
+                if (carrierFrequency != FILE_IO_ERROR)
+                {
+                    IRemitterSendButton(irSignal, carrierFrequency);
+                }
+            }
 
             mainSendButton = false;
         }
