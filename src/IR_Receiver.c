@@ -15,8 +15,8 @@
 
 #include "Board.h"
 #include "Signal_Interval.h"
-#include "IR_Receiver.h"
 #include "IR_Emitter.h"
+#include "IR_Receiver.h"
 
 void IRinitSignalCapture();
 void IRstartSignalCapture();

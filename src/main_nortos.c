@@ -46,8 +46,6 @@
 #include "Board.h"
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
-#include "Signal_Interval.h"
-#include "filesystem.h"
 #include "button.h"
 
 #ifdef DEBUG_SESSION

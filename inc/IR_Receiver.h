@@ -11,8 +11,7 @@
 
 #include "IR_Emitter.h"
 
-#define CAPTURE_MAX_US 16777215 //(2^24-1)
-#define MAX_SEQUENCE_INDEX 128 //7250
+#define CAPTURE_MAX_US 16777215 // (2^24-1)
 #define TIME_PER_TICK 125 // 125E-10s
 #define RESET_INDEX -1
 #define MAXIMUM_SEQUENCE_TIME 1250000000 // 125ms

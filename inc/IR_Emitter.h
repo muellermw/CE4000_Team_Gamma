@@ -15,6 +15,8 @@
 #define IR_LED_OFF() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_OFF)
 #define IR_LED_ON() GPIO_write(Board_IR_OUTPUT_PIN, Board_GPIO_LED_ON)
 
+#define MAX_SEQUENCE_INDEX 128 // 7250
+
 void IR_Init_Emitter();
 void IRsetPWMperiod(uint32_t period);
 void IRstartOneShotTimer();

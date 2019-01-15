@@ -79,7 +79,8 @@ void IRoneShotTimerHandler(Timer_Handle handle)
     // need to close the timer to set the delay to a different value
     Timer_close(oneShotHandle);
 
-    if (currentOutputSequence[currentOutputIndex].time_us != 0)
+    // Check to make sure we have not reached the end of the output sequence buffer
+    if ((currentOutputSequence[currentOutputIndex].time_us != 0) && (currentOutputIndex < MAX_SEQUENCE_INDEX))
     {
         IRsetOneShotTimeout(currentOutputSequence[currentOutputIndex].time_us);
 
@@ -100,6 +101,8 @@ void IRoneShotTimerHandler(Timer_Handle handle)
     {
         IRstopPWMtimer();
         sendingButton = false;
+
+        // Need to free the output sequence
         free(currentOutputSequence);
     }
 }
