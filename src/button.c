@@ -413,15 +413,26 @@ int getButtonCarrierFrequency(_u16 buttonIndex)
     {
         int tableSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
 
-        if (tableSize != FILE_IO_ERROR)
+        // Make sure the button table file contains valid data at this offset
+        if (tableSize >= ((buttonIndex+1)*sizeof(ButtonTableEntry)))
         {
-            ButtonTableEntry* buttonTable = retrieveButtonTableContents(BUTTON_TABLE_FILE, tableSize);
+            // Open the button table file for reading
+            int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
 
-            if (buttonTable != NULL)
+            if (fd != FILE_IO_ERROR)
             {
-                // Grab the carrier frequency
-                RetVal = buttonTable[buttonIndex].irCarrierFrequency;
-                free(buttonTable);
+                _u16 offset = (buttonIndex*sizeof(ButtonTableEntry));
+                ButtonTableEntry buttonEntry;
+                initNewButtonEntry(&buttonEntry, BUTTON_NAME_MAX_SIZE);
+
+                // Read in the button entry at that index
+                fsReadFile(fd, &buttonEntry, offset, sizeof(ButtonTableEntry));
+                fsCloseFile(fd);
+
+                if (buttonEntry.irCarrierFrequency != 0)
+                {
+                    RetVal = buttonEntry.irCarrierFrequency;
+                }
             }
         }
     }
