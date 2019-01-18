@@ -36,4 +36,6 @@ void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 ButtonTableEntry* retrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 SignalInterval* getButtonSignalInterval(_u16 buttonIndex);
 
+void printButtonTable(); //MOVE TO WIFI WHEN READY
+
 #endif /* INC_BUTTON_H_ */

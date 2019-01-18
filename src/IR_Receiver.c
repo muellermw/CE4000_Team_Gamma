@@ -24,7 +24,6 @@ void IRstopSignalCapture();
 void IRinitEdgeDetectGPIO();
 void IRstartEdgeDetectGPIO();
 void IRstopEdgeDetectGPIO();
-void IRreceiverSwitchMode();
 void IRedgeDetectionPassthrough(uint_least8_t index);
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
 static void ConvertToUs(SignalInterval *seq, uint32_t length);
@@ -47,15 +46,13 @@ static bool buttonCaptured = false;
  */
 void IR_Init_Receiver()
 {
-    receiverState = program;
+    receiverState = passthru;
 
     // make sure the sequence array is initialized to zero
     memset(&irSequence[0], 0, sizeof(irSequence));
     IRinitSignalCapture();
     IRinitEdgeDetectGPIO();
-    //IRstartEdgeDetectGPIO();
-
-    IRstartSignalCapture();
+    IRstartEdgeDetectGPIO();
 }
 
 /**
@@ -243,17 +240,19 @@ void IRstopSignalCapture()
 /**
  * Switch the receiver mode based on what state we are in
  */
-void IRreceiverSwitchMode()
+void IRreceiverSetMode(Receiver_Mode mode)
 {
-    switch (receiverState)
+    switch (mode)
     {
     case passthru:
         IRstopSignalCapture();
         IRstartEdgeDetectGPIO();
+        receiverState = passthru;
         break;
     case program:
         IRstopEdgeDetectGPIO();
         IRstartSignalCapture();
+        receiverState = program;
         break;
     }
 }
@@ -272,7 +271,9 @@ SignalInterval* getIRsequence(uint16_t* sequenceSize)
 
 uint16_t getIRcarrierFrequency()
 {
-    return frequency;
+    uint16_t RetVal = frequency;
+    frequency = 0;
+    return RetVal;
 }
 
 bool IRbuttonReady()

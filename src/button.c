@@ -9,6 +9,8 @@
 #include <ti/drivers/net/wifi/simplelink.h>
 #include "filesystem.h"
 #include "button.h"
+#include "uart_term.h" // MIGHT NEED TO REMOVE IN FINAL VERSION
+
 
 static void initializeButtonTable();
 static bool checkIdenticalButtonEntries(const unsigned char* newButtonName, ButtonTableEntry* buttonTableList, _u16 numButtonEntries);
@@ -28,7 +30,7 @@ void button_init()
  * @param buttonCarrierFrequency the carrier frequency of the IR signal
  * @param buttonSequence the IR sequence to store in its own file
  * @param sequenceSize the size of the IR sequence in bytes
- * @return 0 if OK, else FILE_IO_ERROR
+ * @return button index if OK, else FILE_IO_ERROR
  */
 int createButton(const unsigned char* buttonName, _u16 buttonCarrierFrequency, SignalInterval* buttonSequence, _u16 sequenceSize)
 {
@@ -55,7 +57,7 @@ int createButton(const unsigned char* buttonName, _u16 buttonCarrierFrequency, S
                 // Write the sequence into storage
                 fsWriteFile(fd, 0, sequenceSize, buttonSequence);
                 fsCloseFile(fd);
-                RetVal = 0;
+                RetVal = buttonIndex;
             }
             // Something went seriously wrong, revert what was written
             else
@@ -470,6 +472,20 @@ void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize)
     memset(newButton->buttonName, NULL, buttonNameMaxSize);
     newButton->irCarrierFrequency = 0;
     newButton->buttonIndex = 0;
+}
+
+void printButtonTable(){
+    // Get the size of the file so we know how many entries we need to go through
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+    int buttonEntries = fileSize/sizeof(ButtonTableEntry);
+    ButtonTableEntry* btnTblList = retrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
+
+    for (int i = 0; i < buttonEntries; i++)
+    {
+#ifdef DEBUG_SESSION
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", btnTblList[i].buttonName, btnTblList[i].buttonIndex, btnTblList[i].irCarrierFrequency);
+#endif
+    }
 }
 
 /**

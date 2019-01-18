@@ -8,6 +8,7 @@
 //Defines
 
 #define UART_PRINT Report
+#define UART_GET   GetCmd
 #define DBG_PRINT  Report
 #define ERR_PRINT(x) Report("Error [%d] at line [%d] in function [%s]  \n\r",\
                                                                 x, __LINE__, \

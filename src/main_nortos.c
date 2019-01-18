@@ -34,6 +34,9 @@
 /*
  *  ======== main_nortos.c ========
  */
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
@@ -47,13 +50,18 @@
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
 #include "button.h"
+#include "Control_States.h"
 
 #ifdef DEBUG_SESSION
 #include "uart_term.h"
 #endif
 
+void toLower(char* string);
 void gpioButtonFxnSW2(uint_least8_t index);
 void gpioButtonFxnSW3(uint_least8_t index);
+#ifdef DEBUG_SESSION
+void fileSystemTestCode();
+#endif
 
 bool emitterReady = false;
 bool mainSendButton = false;
@@ -91,83 +99,87 @@ int main(void)
     GPIO_enableInt(Board_GPIO_BUTTON_SW2);
     GPIO_enableInt(Board_GPIO_BUTTON_SW3);
 
-    // Initialize IR control
-    if (fsCheckFileExists("Button0") == false)
-    {
-        IR_Init_Receiver();
-    }
-    else
-    {
-        emitterReady = true;
-    }
-
+    // Enable IR receiver and emitter
+    IR_Init_Receiver();
     IR_Init_Emitter();
 
-
-    // file system test code:
-
-    //fsDeleteFile(BUTTON_TABLE_FILE);
-    /*
-    fsAddButtonTableEntry("testButton0", 38000);
-    fsAddButtonTableEntry("testButton1", 56000);
-    fsAddButtonTableEntry("testButton2", 34000);
-    fsDeleteButtonTableEntry(1);
-    fsAddButtonTableEntry("testButton1", 60000);
-
-    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
-    ButtonTableEntry* testList = fsRetrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
-    int numValidEntries = fsFindNumButtonEntries(testList, fileSize);
-
-    if (testList != NULL)
-    {
-        UART_PRINT("Valid entries: %d\r\n", numValidEntries);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[0].buttonName, testList[0].buttonIndex, testList[0].irCarrierFrequency);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[1].buttonName, testList[1].buttonIndex, testList[1].irCarrierFrequency);
-        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[2].buttonName, testList[2].buttonIndex, testList[2].irCarrierFrequency);
-    }
-
-    free(testList);
-    */
-
+    ControlState currState = idle;
     while (1)
     {
-        if (IRbuttonReady())
-        {
-            // Create the button file
+        char buff[64] = {0};
+        UART_GET(buff, 64);
+        UART_PRINT("\r\nReceived: %s\r\n", buff);
+
+        char strState[20] = {0};
+        char arg[32] = {0};
+        sscanf(buff, "%s %s", strState, arg);
+
+        toLower(strState);
+
+        if(strncmp(strState, APP_INIT_STR, sizeof(APP_INIT_STR)) == 0){
+            currState = app_init;
+            printButtonTable();
+            currState = idle;
+        }
+        else if(strncmp(strState, ADD_BUTTON_STR, sizeof(ADD_BUTTON_STR)) == 0){
+            currState = add_button;
+            IRreceiverSetMode(program);
+            UART_PRINT("\r\nReady to Record\r\n");
+            while(!IRbuttonReady());
             uint16_t sequenceSize = 0;
-            SignalInterval* irSignal = getIRsequence(&sequenceSize);
-            createButton("TestButton0", getIRcarrierFrequency(), irSignal, sequenceSize);
-            emitterReady = true;
+            SignalInterval* irSequence = getIRsequence(&sequenceSize);
+            uint16_t carrFreq = getIRcarrierFrequency();
+            int button_index = createButton((const unsigned char*)arg, carrFreq, irSequence, sequenceSize);
+            if(button_index == FILE_IO_ERROR){
+                UART_PRINT("\r\nFILE_IO_ERROR\r\n");
+            }
+            else{
+                UART_PRINT("\r\nButton Info: %s, %d\r\n", arg, button_index);
+            }
+            IRreceiverSetMode(passthru);
+            currState = idle;
+            free(irSequence);
         }
-
-        if (mainDeleteButton == true)
-        {
-            deleteButton(0);
-            mainDeleteButton = false;
-
-            emitterReady = false;
+        else if(strncmp(strState, DELETE_BUTTON_STR, sizeof(DELETE_BUTTON_STR)) == 0){
+            currState = delete_button;
+            int button_index = atoi(arg);
+            int delCheck = deleteButton(button_index);
+            if(delCheck == FILE_IO_ERROR){
+                UART_PRINT("\r\nFailed to Delete Button at Index: %s\r\n", arg);
+            }
+            else{
+                UART_PRINT("\r\nDeleted Button at Index: %s\r\n", arg);
+            }
+            currState = idle;
         }
-
-        if (mainSendButton == true)
-        {
-            SignalInterval* irSignal = getButtonSignalInterval(0);
-
-            if (irSignal != NULL)
+        else if(strncmp(strState, SEND_BUTTON_STR, sizeof(SEND_BUTTON_STR)) == 0){
+            currState = send_button;
+            int button_index = atoi(arg);
+            SignalInterval* irSequence = getButtonSignalInterval(button_index);
+            if (irSequence != NULL)
             {
-                int carrierFrequency = getButtonCarrierFrequency(0);
+                int carrFreq = getButtonCarrierFrequency(button_index);
 
-                if (carrierFrequency != FILE_IO_ERROR)
+                if (carrFreq != FILE_IO_ERROR)
                 {
-                    IRemitterSendButton(irSignal, carrierFrequency);
+                    IRemitterSendButton(irSequence, carrFreq);
+                    UART_PRINT("\r\nSent Button at Index: %s\r\n", arg);
+                }
+                else{
+                    UART_PRINT("\r\nFailed to Send Button at Index: %s\r\n", arg);
                 }
             }
-
-            mainSendButton = false;
+            currState = idle;
+            free(irSequence);
         }
     }
 }
 
-
+void toLower(char* string){
+    for(int i = 0; string[i]; i++){
+        string[i] = tolower(string[i]);
+    }
+}
 
 /**
  *  ======== gpioButtonFxnSW2 ========
@@ -191,3 +203,32 @@ void gpioButtonFxnSW3(uint_least8_t index)
         mainSendButton = true;
     }
 }
+
+#ifdef DEBUG_SESSION
+void fileSystemTestCode()
+{
+    // file system test code:
+
+    //fsDeleteFile(BUTTON_TABLE_FILE);
+    addButtonTableEntry("testButton0", 38000);
+    addButtonTableEntry("testButton1", 56000);
+    addButtonTableEntry("testButton2", 34000);
+    deleteButtonTableEntry(1);
+    addButtonTableEntry("testButton1", 60000);
+
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+    ButtonTableEntry* testList = retrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
+    int numValidEntries = findNumButtonEntries(testList, fileSize);
+
+    if (testList != NULL)
+    {
+        UART_PRINT("Valid entries: %d\r\n", numValidEntries);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[0].buttonName, testList[0].buttonIndex, testList[0].irCarrierFrequency);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[1].buttonName, testList[1].buttonIndex, testList[1].irCarrierFrequency);
+        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", testList[2].buttonName, testList[2].buttonIndex, testList[2].irCarrierFrequency);
+    }
+
+    free(testList);
+}
+#endif
+
