@@ -134,9 +134,9 @@ int main(void)
         if (IRbuttonReady())
         {
             // Create the button file
-            SignalInterval* irSignal = getIRsequence();
-            createButton("TestButton0", getIRcarrierFrequency(), irSignal, MAX_SEQUENCE_INDEX*sizeof(SignalInterval));
-
+            uint16_t sequenceSize = 0;
+            SignalInterval* irSignal = getIRsequence(&sequenceSize);
+            createButton("TestButton0", getIRcarrierFrequency(), irSignal, sequenceSize);
             emitterReady = true;
         }
 

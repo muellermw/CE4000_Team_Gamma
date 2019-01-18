@@ -29,7 +29,7 @@ typedef enum
 } Receiver_Mode;
 
 void IR_Init_Receiver();
-SignalInterval* getIRsequence();
+SignalInterval* getIRsequence(uint16_t* sequenceSize);
 uint16_t getIRcarrierFrequency();
 
 #endif /* INC_IR_RECEIVER_H_ */

@@ -32,12 +32,14 @@ static void ConvertToUs(SignalInterval *seq, uint32_t length);
 Receiver_Mode receiverState;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
-static SignalInterval sequence[MAX_SEQUENCE_INDEX];
+static SignalInterval irSequence[MAX_SEQUENCE_INDEX];
 static SignalInterval currentInt;
 static uint16_t edgeCnt = 0;
 static uint16_t frequency = 0;
+static uint16_t irSequenceSize = 0;
 static int32_t seqIndex = -1;
 static uint32_t totalCaptureTime = 0;
+static bool irGapDetected = false;
 static bool buttonCaptured = false;
 
 /**
@@ -48,7 +50,7 @@ void IR_Init_Receiver()
     receiverState = program;
 
     // make sure the sequence array is initialized to zero
-    memset(&sequence[0], 0, sizeof(sequence));
+    memset(&irSequence[0], 0, sizeof(irSequence));
     IRinitSignalCapture();
     IRinitEdgeDetectGPIO();
     //IRstartEdgeDetectGPIO();
@@ -107,22 +109,26 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 
     // If the signal has exceeded the time limit, the end of the array has been reached, or
     // a sufficiently long silent pulse has been found, stop recording the signal.
-    else if((totalCaptureTime >= MAXIMUM_SEQUENCE_TIME) || (seqIndex >= MAX_SEQUENCE_INDEX) || (seqIndex == END_SEQUENCE_INDEX)){
+    else if((totalCaptureTime >= MAXIMUM_SEQUENCE_TIME) || (seqIndex >= MAX_SEQUENCE_INDEX) || (irGapDetected == true)){
         IRstopSignalCapture();
 
         // Since the final index recorded is guaranteed to be a silence,
         // update the time to 0us to prevent the IR Emitter from outputting it
         // unnecessarily.
         seqIndex--;
-        (sequence[seqIndex]).time_us = 0;
+        (irSequence[seqIndex]).time_us = 0;
+
+        // Update the sequence size so we know how large the IR sequence buffer is when storing
+        irSequenceSize = seqIndex;
 
         // Convert the 1E-10s that were recorded to microseconds
-        ConvertToUs(sequence, seqIndex);
+        ConvertToUs(irSequence, seqIndex);
 
         // Reset variables for next capture
         seqIndex = RESET_INDEX;
         totalCaptureTime = 0;
         edgeCnt = 0;
+        irGapDetected = false;
         buttonCaptured = true;
     }
 
@@ -154,12 +160,12 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
                 frequency = (E_10S_TO_SEC_SCALAR*edgeCnt)/period_us;
             }
             // Record the PWM pulse
-            sequence[seqIndex] = currentInt;
+            irSequence[seqIndex] = currentInt;
             // Record the silent pulse
             seqIndex++;
             currentInt.time_us = interval;
             currentInt.PWM = false;
-            sequence[seqIndex] = currentInt;
+            irSequence[seqIndex] = currentInt;
             // Reset variables to receiver more pulses
             seqIndex++;
             currentInt.time_us = 0;
@@ -167,7 +173,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             // If the silent pulse was longer than the maximum allowed gap,
             // assume the sequence ended, and a duplicate signal is next
             if(interval >= END_SEQUENCE_TIME){
-                seqIndex = END_SEQUENCE_INDEX;
+                irGapDetected = true;
             }
         }
     }
@@ -252,9 +258,16 @@ void IRreceiverSwitchMode()
     }
 }
 
-SignalInterval* getIRsequence()
+/**
+ * Get the IR sequence in addition to its size
+ * @param  sequenceSize the pointer to an integer where the sequence size will be stored
+ *         NOTE: sequence size is in BYTES
+ * @return the pointer to the IR sequence buffer
+ */
+SignalInterval* getIRsequence(uint16_t* sequenceSize)
 {
-    return &sequence[0];
+    *sequenceSize = irSequenceSize*sizeof(SignalInterval);
+    return &irSequence[0];
 }
 
 uint16_t getIRcarrierFrequency()
