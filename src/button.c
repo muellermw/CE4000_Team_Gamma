@@ -290,7 +290,6 @@ int addButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequ
 
                 free(buttonTableList);
             }
-
         }
         // If we get here that means that the file size is likely 0 and has no entries
         else

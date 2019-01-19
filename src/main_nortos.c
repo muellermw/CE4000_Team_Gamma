@@ -138,7 +138,6 @@ int main(void)
             }
             IRreceiverSetMode(passthru);
             currState = idle;
-            free(irSequence);
         }
         else if(strncmp(strState, DELETE_BUTTON_STR, sizeof(DELETE_BUTTON_STR)) == 0){
             currState = delete_button;
@@ -154,6 +153,7 @@ int main(void)
         }
         else if(strncmp(strState, SEND_BUTTON_STR, sizeof(SEND_BUTTON_STR)) == 0){
             currState = send_button;
+            IRstopEdgeDetectGPIO();
             int button_index = atoi(arg);
             SignalInterval* irSequence = getButtonSignalInterval(button_index);
             if (irSequence != NULL)
@@ -170,7 +170,7 @@ int main(void)
                 }
             }
             currState = idle;
-            free(irSequence);
+            IRstartEdgeDetectGPIO();
         }
     }
 }

@@ -22,8 +22,6 @@ void IRinitSignalCapture();
 void IRstartSignalCapture();
 void IRstopSignalCapture();
 void IRinitEdgeDetectGPIO();
-void IRstartEdgeDetectGPIO();
-void IRstopEdgeDetectGPIO();
 void IRedgeDetectionPassthrough(uint_least8_t index);
 void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
 static void ConvertToUs(SignalInterval *seq, uint32_t length);
@@ -265,7 +263,7 @@ void IRreceiverSetMode(Receiver_Mode mode)
  */
 SignalInterval* getIRsequence(uint16_t* sequenceSize)
 {
-    *sequenceSize = irSequenceSize*sizeof(SignalInterval);
+    *sequenceSize = (uint16_t)(irSequenceSize*sizeof(SignalInterval));
     return &irSequence[0];
 }
 
@@ -279,7 +277,12 @@ uint16_t getIRcarrierFrequency()
 bool IRbuttonReady()
 {
     bool RetVal = buttonCaptured;
-    buttonCaptured = false;
+    if (RetVal == true)
+    {
+        // Reset the button captured flag
+        buttonCaptured = false;
+    }
+
     return RetVal;
 }
 

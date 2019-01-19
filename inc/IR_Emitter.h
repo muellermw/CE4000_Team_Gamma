@@ -24,5 +24,7 @@ void IRsetOneShotTimeout(uint32_t time_in_us);
 void IRemitterSendButton(SignalInterval* button, uint16_t frequency);
 bool IRbuttonReady();
 bool IRbuttonSending();
+void IRstartEdgeDetectGPIO();
+void IRstopEdgeDetectGPIO();
 
 #endif /* INC_IR_EMITTER_H_ */
