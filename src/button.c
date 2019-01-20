@@ -41,33 +41,37 @@ int createButton(const unsigned char* buttonName, _u16 buttonCarrierFrequency, S
 {
     int RetVal = FILE_IO_ERROR;
 
-    if (buttonName != NULL && buttonSequence != NULL)
+    if (buttonName != NULL)
     {
-        int buttonIndex = addButtonTableEntry(buttonName, buttonCarrierFrequency);
-
-        // Check if a valid index has been returned
-        if (buttonIndex >= 0 && buttonIndex <= MAX_AMOUNT_OF_BUTTONS)
+        // Make sure the button name and IR sequence are not empty
+        if ((buttonName[0] != NULL) && (buttonSequence != NULL))
         {
-            char sequenceFileName[BUTTON_FILE_NAME_MAX_SIZE];
-            memset(sequenceFileName, NULL, BUTTON_FILE_NAME_MAX_SIZE);
+            int buttonIndex = addButtonTableEntry(buttonName, buttonCarrierFrequency);
 
-            // Form the new file name string
-            snprintf(sequenceFileName, BUTTON_FILE_NAME_MAX_SIZE, BUTTON_FILE_STRING, buttonIndex);
-
-            int fd = fsCreateFile((const unsigned char*)sequenceFileName, sequenceSize);
-
-            // Check if the file descriptor is valid
-            if (fd != FILE_IO_ERROR)
+            // Check if a valid index has been returned
+            if (buttonIndex >= 0 && buttonIndex <= MAX_AMOUNT_OF_BUTTONS)
             {
-                // Write the sequence into storage
-                fsWriteFile(fd, 0, sequenceSize, buttonSequence);
-                fsCloseFile(fd);
-                RetVal = buttonIndex;
-            }
-            // Something went seriously wrong, revert what was written
-            else
-            {
-                deleteButtonTableEntry(buttonIndex);
+                char sequenceFileName[BUTTON_FILE_NAME_MAX_SIZE];
+                memset(sequenceFileName, NULL, BUTTON_FILE_NAME_MAX_SIZE);
+
+                // Form the new file name string
+                snprintf(sequenceFileName, BUTTON_FILE_NAME_MAX_SIZE, BUTTON_FILE_STRING, buttonIndex);
+
+                int fd = fsCreateFile((const unsigned char*)sequenceFileName, sequenceSize);
+
+                // Check if the file descriptor is valid
+                if (fd != FILE_IO_ERROR)
+                {
+                    // Write the sequence into storage
+                    fsWriteFile(fd, 0, sequenceSize, buttonSequence);
+                    fsCloseFile(fd);
+                    RetVal = buttonIndex;
+                }
+                // Something went seriously wrong, revert what was written
+                else
+                {
+                    deleteButtonTableEntry(buttonIndex);
+                }
             }
         }
     }
