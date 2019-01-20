@@ -107,14 +107,14 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
     else if((totalCaptureTime >= MAXIMUM_SEQUENCE_TIME) || (seqIndex >= MAX_SEQUENCE_INDEX) || (irGapDetected == true)){
         IRstopSignalCapture();
 
+        // Update the sequence size so we know how large the IR sequence buffer is when storing
+        irSequenceSize = seqIndex;
+
         // Since the final index recorded is guaranteed to be a silence,
         // update the time to 0us to prevent the IR Emitter from outputting it
         // unnecessarily.
         seqIndex--;
         (irSequence[seqIndex]).time_us = 0;
-
-        // Update the sequence size so we know how large the IR sequence buffer is when storing
-        irSequenceSize = seqIndex;
 
         // Convert the 1E-10s that were recorded to microseconds
         ConvertToUs(irSequence, seqIndex);
@@ -149,6 +149,7 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             // Calculate the average frequency from the first PWM pulse
             if(frequency == 0){
                 edgeCnt--;
+
                 // Rather than divide edges by 2 to get # of periods
                 // multiply time by 2 for efficiency
                 uint32_t period_us = (currentInt.time_us*2);
@@ -161,10 +162,12 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
             currentInt.time_us = interval;
             currentInt.PWM = false;
             irSequence[seqIndex] = currentInt;
+
             // Reset variables to receiver more pulses
             seqIndex++;
             currentInt.time_us = 0;
             currentInt.PWM = true;
+
             // If the silent pulse was longer than the maximum allowed gap,
             // assume the sequence ended, and a duplicate signal is next
             if(interval >= END_SEQUENCE_TIME){

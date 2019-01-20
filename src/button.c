@@ -7,9 +7,14 @@
 
 #include <stdio.h>
 #include <ti/drivers/net/wifi/simplelink.h>
+// Board Header file
+#include "Board.h"
 #include "filesystem.h"
 #include "button.h"
-#include "uart_term.h" // MIGHT NEED TO REMOVE IN FINAL VERSION
+
+#ifdef DEBUG_SESSION
+#include "uart_term.h"
+#endif
 
 
 static void initializeButtonTable();
@@ -88,16 +93,31 @@ int deleteButton(_u16 buttonIndex)
         // Form the new file name string
         snprintf(sequenceFileName, BUTTON_FILE_NAME_MAX_SIZE, BUTTON_FILE_STRING, buttonIndex);
 
-        RetVal = fsDeleteFile((const unsigned char*)sequenceFileName);
+        fsDeleteFile((const unsigned char*)sequenceFileName);
 
-        if (RetVal != FILE_IO_ERROR)
-        {
-            // Delete the table entry
-            RetVal = deleteButtonTableEntry(buttonIndex);
-        }
+        // Delete the table entry
+        RetVal = deleteButtonTableEntry(buttonIndex);
     }
 
     return RetVal;
+}
+
+/**
+ * Delete all buttons that were ever added to flash
+ */
+void deleteAllButtons()
+{
+    // Get the size of the file so we know how many entries we need to go through
+    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+
+    int numButtons = fileSize/sizeof(ButtonTableEntry);
+
+    // Go through each possible button entry and clear both the button entry and the file
+    for (int i=numButtons; (i-1) >= 0; i--)
+    {
+        // Don't check for any errors, as we don't care if a button file doesn't exist at this point
+        deleteButton(i-1);
+    }
 }
 
 /**

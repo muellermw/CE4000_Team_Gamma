@@ -35,6 +35,7 @@ int getButtonCarrierFrequency(_u16 buttonIndex);
 void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 ButtonTableEntry* retrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 SignalInterval* getButtonSignalInterval(_u16 buttonIndex);
+void deleteAllButtons();
 
 void printButtonTable(); //MOVE TO WIFI WHEN READY
 

@@ -172,9 +172,16 @@ int main(void)
             currState = idle;
             IRstartEdgeDetectGPIO();
         }
+        else if(strncmp(strState, CLEAR_BUTTONS_STR, sizeof(CLEAR_BUTTONS_STR)) == 0){
+            deleteAllButtons();
+        }
     }
 }
 
+/**
+ * This method converts all upper-case letters in a string to lower-case
+ * @param string the char array to convert to lower-case
+ */
 void toLower(char* string){
     for(int i = 0; string[i]; i++){
         string[i] = tolower(string[i]);
