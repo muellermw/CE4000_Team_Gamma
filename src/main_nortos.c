@@ -111,7 +111,8 @@ int main(void)
     IR_Init_Emitter();
 
     /***********************************************************************
-     * Init UDP
+     * Init UDP: for non-blocking sockets, take a look at this link:
+     * http://e2e.ti.com/support/wireless-connectivity/wifi/f/968/t/368485
      ***********************************************************************/
     _i16 Sd;
     _i16 Status;
