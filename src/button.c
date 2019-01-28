@@ -506,7 +506,7 @@ void printButtonTable(){
     for (int i = 0; i < buttonEntries; i++)
     {
 #ifdef DEBUG_SESSION
-        UART_PRINT("Name: %s\r\nIndex: %d\r\nFrequency: %d\r\n", btnTblList[i].buttonName, btnTblList[i].buttonIndex, btnTblList[i].irCarrierFrequency);
+        UART_PRINT("\nName: %s\r\nIndex: %d\r\nFrequency: %d\r\n\n", btnTblList[i].buttonName, btnTblList[i].buttonIndex, btnTblList[i].irCarrierFrequency);
 #endif
     }
 }

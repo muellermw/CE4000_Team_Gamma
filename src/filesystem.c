@@ -451,80 +451,17 @@ bool fsCheckFileExists(const unsigned char* fileName)
 
 /**
  * This method initializes the file system subsystems in order to utilize the file system API
+ * Note: the CC3220SF Network Processor also needs to be powered up by the call to sl_Start,
+ *       but this should be handled in another wlan/wifi file
  */
 void filesystem_init()
 {
-    // Terminal Initialization
-    InitTerm();
-
     // Wifi Enabling (needed for the file system)
     wifi_init();
-
-    // Powerup the CC3220SF Network Processor
-    sl_Start(0, 0, 0);
 
     // These are static debug UART calls
 #ifdef DEBUG_SESSION
     st_ShowStorageInfo();
     st_listFiles(250, 0);
 #endif
-}
-
-
-/************************************************
- * These functions are required by the SDK and
- * will be filled out during later development.
- ***********************************************/
-
-void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
-{
-#ifdef DEBUG_SESSION
-    UART_PRINT("pWlanEvent->Id=%d\n\r", pWlanEvent->Id);
-#endif
-}
-
-void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *slFatalErrorEvent)
-{
-#ifdef DEBUG_SESSION
-    UART_PRINT("slFatalErrorEvent->Id=%d\n\r", slFatalErrorEvent->Id);
-#endif
-}
-
-void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *pDevEvent)
-{
-#ifdef DEBUG_SESSION
-     UART_PRINT("pDevEvent->Id=%d\n\r", pDevEvent->Id);
-#endif
-}
-
-void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
-{
-    /* Unused in this application for now */
-}
-
-void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
-{
-    /* Unused in this application for now */
-}
-
-void SimpleLinkHttpServerEventHandler(SlNetAppHttpServerEvent_t *pHttpEvent,
-                                      SlNetAppHttpServerResponse_t *pHttpResponse)
-{
-    /* Unused in this application for now */
-}
-
-void SimpleLinkNetAppRequestMemFreeEventHandler (uint8_t *buffer)
-{
-    /* Unused in this application for now */
-}
-
-void SimpleLinkNetAppRequestEventHandler (SlNetAppRequest_t *pNetAppRequest,
-                                          SlNetAppResponse_t *pNetAppResponse)
-{
-    /* Unused in this application for now */
-}
-
-void SimpleLinkSocketTriggerEventHandler(SlSockTriggerEvent_t *pSockTriggerEvent)
-{
-    /* Unused in this application for now */
 }
