@@ -128,7 +128,7 @@ int main(void)
     _i16 Sd;
     _i16 Status;
     SlSockAddrIn_t Addr;
-    char buff[BUFF_SIZE] = {0};
+    char recBuf[BUFF_SIZE] = {0};
     char sendBuf[BUFF_SIZE] = {0};
     Sd = sl_Socket(SL_AF_INET, SL_SOCK_DGRAM, 0);
     if( 0 > Sd )
@@ -165,7 +165,7 @@ int main(void)
 
         // Receive data from the network
         SlSocklen_t AddrSize = sizeof(SlSockAddrIn_t);
-        Status = sl_RecvFrom(Sd, buff, BUFF_SIZE, 0, ( SlSockAddr_t *)&Addr, &AddrSize);
+        Status = sl_RecvFrom(Sd, recBuf, BUFF_SIZE, 0, ( SlSockAddr_t *)&Addr, &AddrSize);
         if(Status < 0 && Status != SL_EAGAIN)
         {
             UART_PRINT("\r\n%s\r\n", RECEIVING_ERROR);
@@ -174,20 +174,23 @@ int main(void)
         // Data was received
         if (Status > 0)
         {
-            UART_PRINT("\r\nReceived: %s\r\n", buff);
+            UART_PRINT("\r\nReceived: %s\r\n", recBuf);
 
             // Parse commands from the receive buffer
-            char strState[ARG_LENGTH] = {0};
-            char arg1[ARG_LENGTH] = {0};
-            char arg2[ARG_LENGTH] = {0};
-            sscanf(buff, "%s , %s , %s", strState, arg1, arg2);
+            char *strState;
+            char *arg1;
+            char *arg2;
+            const char delim[2] = ",'";
+            strState = strtok(recBuf, delim);
+            arg1 = strtok(NULL, delim);
+            arg2 = strtok(NULL, delim);
             toLower(strState);
 
             // APP_INIT: Provide the app with the device IP and Name
             // TODO Use the actual ip and device name
-            if(strncmp(strState, APP_INIT_STR, sizeof(APP_INIT_STR)) == 0){
+            if(strncmp(strState, APP_INIT_STR, strlen(APP_INIT_STR)) == 0){
                 currState = app_init;
-                sprintf(sendBuf, "\r\n%s , %s\r\n", "192.168.1.33","Prototype Device");
+                sprintf(sendBuf, "\r\n%s,%s\r\n", "192.168.1.33","Prototype Device");
                 Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                 if( strlen(sendBuf) != Status )
                 {
@@ -197,13 +200,14 @@ int main(void)
             }
             // BUTTON_REFRESH: Provide the app with a list of available buttons
             // TODO Reformat the list structure and send over the network
-            else if(strncmp(strState, BUTTON_REFRESH_STR, sizeof(BUTTON_REFRESH_STR)) == 0){
+            else if(strncmp(strState, BUTTON_REFRESH_STR, strlen(BUTTON_REFRESH_STR)) == 0){
                 currState = button_refresh;
                 printButtonTable();
                 currState = idle;
             }
             // ADD_BUTTON: Record the button and report back to the app
-            else if(strncmp(strState, ADD_BUTTON_STR, sizeof(ADD_BUTTON_STR)) == 0){
+            // TODO Check for null argument
+            else if(strncmp(strState, ADD_BUTTON_STR, strlen(ADD_BUTTON_STR)) == 0){
                 currState = add_button;
                 IRreceiverSetMode(program);
 
@@ -225,7 +229,7 @@ int main(void)
                 }
                 else{
                     //UART_PRINT("\r\nbutton_saved,%s,%d\r\n", arg1, button_index);
-                    sprintf(sendBuf, "\r\nbutton_saved , %s , %d\r\n", arg1, button_index);
+                    sprintf(sendBuf, "\r\nbutton_saved,%s,%d\r\n", arg1, button_index);
                     Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                     if( strlen(sendBuf) != Status )
                     {
@@ -236,17 +240,17 @@ int main(void)
                 currState = idle;
             }
             // DELETE_BUTTON: Deletes button from flash and reports back to app
-            // TODO Check button name and send errors
-            else if(strncmp(strState, DELETE_BUTTON_STR, sizeof(DELETE_BUTTON_STR)) == 0){
+            // TODO Check button name and send errors and check for null arguments
+            else if(strncmp(strState, DELETE_BUTTON_STR, strlen(DELETE_BUTTON_STR)) == 0){
                 currState = delete_button;
                 int button_index = atoi(arg1);
                 int delCheck = deleteButton(button_index);
                 if(delCheck == FILE_IO_ERROR){
-                    UART_PRINT("\r\nFailed to Delete Button at Index: %s\r\n", arg1);
+                    UART_PRINT("\r\ndeleted_button,%s\r\n", arg1);
                 }
                 else{
                     //UART_PRINT("\r\ndeleted_button,%s\r\n", arg1);
-                    sprintf(sendBuf, "\r\ndeleted_button , %s\r\n", arg1);
+                    sprintf(sendBuf, "\r\ndeleted_button,%s\r\n", arg1);
                     Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                     if( strlen(sendBuf) != Status )
                     {
@@ -256,8 +260,8 @@ int main(void)
                 currState = idle;
             }
             // DELETE_BUTTON: Sends button with IR and reports back to app
-            // TODO Check button name and send errors
-            else if(strncmp(strState, SEND_BUTTON_STR, sizeof(SEND_BUTTON_STR)) == 0){
+            // TODO Check button name and send errors and check for null arguments
+            else if(strncmp(strState, SEND_BUTTON_STR, strlen(SEND_BUTTON_STR)) == 0){
                 currState = send_button;
                 IRstopEdgeDetectGPIO();
                 int button_index = atoi(arg1);
@@ -270,7 +274,7 @@ int main(void)
                     {
                         IRemitterSendButton(irSequence, carrFreq);
                         //UART_PRINT("\r\nbutton_sent,%s\r\n", button_index);
-                        sprintf(sendBuf, "\r\nbutton_sent , %s\r\n", arg1);
+                        sprintf(sendBuf, "\r\nbutton_sent,%s\r\n", arg1);
                         Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                         if( strlen(sendBuf) != Status )
                         {
@@ -278,13 +282,13 @@ int main(void)
                         }
                     }
                     else{
-                        UART_PRINT("\r\nFailed to Send Button at Index: %d\r\n", button_index);
+                        UART_PRINT("\r\nfailed_send_button,%d\r\n", button_index);
                     }
                 }
                 currState = idle;
                 IRstartEdgeDetectGPIO();
             }
-            else if(strncmp(strState, CLEAR_BUTTONS_STR, sizeof(CLEAR_BUTTONS_STR)) == 0){
+            else if(strncmp(strState, CLEAR_BUTTONS_STR, strlen(CLEAR_BUTTONS_STR)) == 0){
                 deleteAllButtons();
             }
         }
