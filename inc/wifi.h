@@ -8,6 +8,9 @@
 #ifndef INC_WIFI_H_
 #define INC_WIFI_H_
 
+// This is what we think is the error code for the SimpleLink driver is,
+// it is in the documentation, but it is not declared
+#define SL_EAGAIN -11
 #define PROVISIONING_INACTIVITY_TIMEOUT 1800
 #define NWP_STOP_TIMEOUT 1000
 

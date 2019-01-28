@@ -49,6 +49,7 @@
 #include "Board.h"
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
+#include "wifi.h"
 #include "button.h"
 #include "Control_States.h"
 
@@ -154,19 +155,24 @@ int main(void)
     ControlState currState = idle;
     while (1)
     {
-        //char buff[64] = {0};
-        //UART_GET(buff, 64);
+        //The SimpleLink host driver architecture mandate calling 'sl_task' in
+        //a NO-RTOS application's main loop.
+        //The purpose of this call, is to handle asynchronous events and get
+        //flow control information sent from the NWP.
+        //Every event is classified and later handled by the host driver
+        //event handlers.
+        sl_Task(NULL);
 
         // Receive data from the network
         SlSocklen_t AddrSize = sizeof(SlSockAddrIn_t);
         Status = sl_RecvFrom(Sd, buff, BUFF_SIZE, 0, ( SlSockAddr_t *)&Addr, &AddrSize);
-        if( 0 > Status )
+        if(Status < 0 && Status != SL_EAGAIN)
         {
             UART_PRINT("\r\n%s\r\n", RECEIVING_ERROR);
         }
 
         // Data was received
-        if (buff[0])
+        if (Status > 0)
         {
             UART_PRINT("\r\nReceived: %s\r\n", buff);
 
@@ -281,11 +287,6 @@ int main(void)
             else if(strncmp(strState, CLEAR_BUTTONS_STR, sizeof(CLEAR_BUTTONS_STR)) == 0){
                 deleteAllButtons();
             }
-            memset(buff, 0, BUFF_SIZE*sizeof(_i8));
-        }
-        else
-        {
-            UART_PRINT("\n");
         }
     }
 }
