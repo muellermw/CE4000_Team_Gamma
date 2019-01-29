@@ -151,7 +151,7 @@ int deleteButtonTableEntry(_u16 buttonIndex)
             ButtonTableEntry* buttonTableList = retrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
 
             // Check that the list is valid
-            if (buttonTableList != NULL)
+            if (buttonTableList != NULL && buttonTableList[buttonIndex].buttonName[0] != NULL)
             {
                 int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_write);
                 if (fd != FILE_IO_ERROR)

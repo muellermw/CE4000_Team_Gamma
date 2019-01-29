@@ -180,17 +180,35 @@ int main(void)
             char *strState;
             char *arg1;
             char *arg2;
-            const char delim[2] = ",'";
+            const char delim[2] = ",";
             strState = strtok(recBuf, delim);
             arg1 = strtok(NULL, delim);
             arg2 = strtok(NULL, delim);
             toLower(strState);
 
             // APP_INIT: Provide the app with the device IP and Name
-            // TODO Use the actual ip and device name
             if(strncmp(strState, APP_INIT_STR, strlen(APP_INIT_STR)) == 0){
+                // Get the obtained IP of the device
+                uint16_t len = sizeof(SlNetCfgIpV4Args_t);
+                uint16_t configOpt = 0;
+                SlNetCfgIpV4Args_t ipV4 = {0};
+                sl_NetCfgGet(SL_NETCFG_IPV4_STA_ADDR_MODE, &configOpt, &len, (_u8 *)&ipV4);
+
+                // Get the user-assigned name of the device
+                len = DEVICE_NAME_LENGTH;
+                char* deviceName[len];
+                memset(deviceName, 0, len);
+                configOpt = SL_WLAN_P2P_OPT_DEV_NAME;
+                sl_WlanGet(SL_WLAN_CFG_P2P_PARAM_ID, &configOpt , &len, (_u8*)deviceName);
+
                 currState = app_init;
-                sprintf(sendBuf, "\r\n%s,%s\r\n", "192.168.1.33","Prototype Device");
+                sprintf(sendBuf, "\r\n%d.%d.%d.%d,%s\r\n",
+                                 (uint8_t)SL_IPV4_BYTE(ipV4.Ip, 3),
+                                 (uint8_t)SL_IPV4_BYTE(ipV4.Ip, 2),
+                                 (uint8_t)SL_IPV4_BYTE(ipV4.Ip, 1),
+                                 (uint8_t)SL_IPV4_BYTE(ipV4.Ip, 0),
+                                 (char *)deviceName);
+
                 Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                 if( strlen(sendBuf) != Status )
                 {

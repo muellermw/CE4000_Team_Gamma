@@ -11,8 +11,9 @@
 // This is what we think is the error code for the SimpleLink driver is,
 // it is in the documentation, but it is not declared
 #define SL_EAGAIN -11
-#define PROVISIONING_INACTIVITY_TIMEOUT 1800
+#define PROVISIONING_INACTIVITY_TIMEOUT 3600
 #define NWP_STOP_TIMEOUT 1000
+#define DEVICE_NAME_LENGTH 33
 
 // Uncomment this line to use our SSID for the Access Point
 //#define USE_NCIR_SSID

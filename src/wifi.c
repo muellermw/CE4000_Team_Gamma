@@ -8,6 +8,9 @@
 // Driver Header files
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
+#include <ti/devices/cc32xx/inc/hw_types.h>
+#include <ti/devices/cc32xx/driverlib/prcm.h>
+#include <ti/drivers/power/PowerCC32XX.h>
 #include <ti/drivers/net/wifi/simplelink.h>
 #include <stdio.h>
 #include "Board.h"
@@ -116,17 +119,15 @@ int32_t wifiProvisioning()
     snprintf(ncirSSID, newSsidSize, "NCIR-%x%x%x", simpleLinkMac[3],
                                                    simpleLinkMac[4],
                                                    simpleLinkMac[5]);
-
-    sl_WlanSet(SL_WLAN_CFG_AP_ID, SL_WLAN_AP_OPT_SSID, strlen(ncirSSID), (const unsigned char*)ncirSSID);
 #else
     int newSsidSize = sizeof("mysimplelink-XXXXXX");
     char ncirSSID[newSsidSize];
     snprintf(ncirSSID, newSsidSize, "mysimplelink-%x%x%x", simpleLinkMac[3],
                                                            simpleLinkMac[4],
                                                            simpleLinkMac[5]);
+#endif
 
     sl_WlanSet(SL_WLAN_CFG_AP_ID, SL_WLAN_AP_OPT_SSID, strlen(ncirSSID), (const unsigned char*)ncirSSID);
-#endif
 
     UART_PRINT(" MAC address: %x:%x:%x:%x:%x:%x\r\n\r\n",
                simpleLinkMac[0],
@@ -327,10 +328,10 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             UART_PRINT(
                 " [Provisioning] Profile Confirmation failed (Connection "
                 "Success, feedback to Smartphone app failed)\r\n");
-            sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
             sl_Stop(NWP_STOP_TIMEOUT);
-            wifi_init();
             GPIO_write(Board_PAIRING_OUTPUT_PIN, 1);
+            // Reset the MCU in order allow the WiFi changes to take place
+            MAP_PRCMHibernateCycleTrigger();
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_SUCCESS:
@@ -347,8 +348,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             UART_PRINT("\r\n Provisioning stopped:");
             if(ROLE_STA == pWlanEvent->Data.ProvisioningStatus.Role)
             {
-                if(SL_WLAN_STATUS_CONNECTED ==
-                   pWlanEvent->Data.ProvisioningStatus.WlanStatus)
+                if(SL_WLAN_STATUS_CONNECTED == pWlanEvent->Data.ProvisioningStatus.WlanStatus)
                 {
                     UART_PRINT(
                         "Connected to SSID: %s\r\n",
