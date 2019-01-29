@@ -50,6 +50,7 @@
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
 #include "wifi.h"
+#include "filesystem.h"
 #include "button.h"
 #include "Control_States.h"
 
@@ -67,6 +68,7 @@
 #define READY_REC "ready_to_record"
 #define SEND_ERROR "Error Sending Message"
 
+char* createButtonRefreshBuffer();
 void toLower(char* string);
 void gpioButtonFxnSW2(uint_least8_t index);
 void gpioButtonFxnSW3(uint_least8_t index);
@@ -217,10 +219,26 @@ int main(void)
                 currState = idle;
             }
             // BUTTON_REFRESH: Provide the app with a list of available buttons
-            // TODO Reformat the list structure and send over the network
+            // TODO sl_SendTo error case
             else if(strncmp(strState, BUTTON_REFRESH_STR, strlen(BUTTON_REFRESH_STR)) == 0){
                 currState = button_refresh;
-                printButtonTable();
+
+                char* refreshBuff = createButtonRefreshBuffer();
+
+                if (refreshBuff != NULL)
+                {
+                    // Add the end NULL character for receiver convenience
+                    uint16_t refreshBuffSize = strlen(refreshBuff) + 1;
+
+                    Status = sl_SendTo(Sd, refreshBuff, refreshBuffSize, 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
+
+                    if(refreshBuffSize != Status)
+                    {
+                        UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+                    }
+
+                    free(refreshBuff);
+                }
                 currState = idle;
             }
             // ADD_BUTTON: Record the button and report back to the app
@@ -311,6 +329,66 @@ int main(void)
             }
         }
     }
+}
+
+/**
+ * This function creates a button refresh buffer to send to a client
+ * based on the data within the button table of contents file
+ * @return the populated button refresh buffer
+ * @note THE RETURNED BUFFER NEEDS TO BE FREED BY THE CALLER
+ */
+char* createButtonRefreshBuffer()
+{
+    char* refreshBuff = NULL;
+
+    // This adds up the button name max size, size of the button index number,
+    // and the extra characters added between the values
+    uint8_t refreshEntryMaxSize = BUTTON_NAME_MAX_SIZE + sizeof(uint16_t) + strlen(",\r\n");
+    uint16_t buttonTableSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+
+    if (buttonTableSize > 0)
+    {
+        ButtonTableEntry* buttonTable = retrieveButtonTableContents(BUTTON_TABLE_FILE, buttonTableSize);
+
+        if (buttonTable != NULL)
+        {
+            uint8_t numEntries = findNumButtonEntries(buttonTable, buttonTableSize);
+
+            // Allocate the maximum theoretical buffer for the entries
+            refreshBuff = malloc((refreshEntryMaxSize * numEntries) + 1);
+
+            if (refreshBuff != NULL)
+            {
+                uint8_t i = 0;
+                uint8_t entryIndex = 0;
+                char* offset = refreshBuff;
+                char entryStringBuff[refreshEntryMaxSize];
+
+                // Loop though the button entries to fill the buffer
+                while (i < numEntries)
+                {
+                    // Make sure each button entry is valid, skip it if not
+                    if (buttonTable[entryIndex].buttonName[0] != NULL)
+                    {
+                        sprintf(entryStringBuff, "%s,%d\r\n", (char *)(buttonTable[entryIndex].buttonName), buttonTable[entryIndex].buttonIndex);
+                        uint8_t entryLength = strlen(entryStringBuff);
+
+                        // Add +1 for the NULL character that strlen didn't account for
+                        memcpy(offset, entryStringBuff, entryLength + 1);
+
+                        // Increment the offset by the string length of the entry string
+                        offset += entryLength;
+                        i++;
+                    }
+                    // Always increment the entry index
+                    entryIndex++;
+                }
+            }
+            free(buttonTable);
+        }
+    }
+
+    return refreshBuff;
 }
 
 /**

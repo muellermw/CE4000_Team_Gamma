@@ -267,7 +267,7 @@ int addButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequ
 
                         // Create the new button entry
                         initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
-                        strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+                        strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE-1);
                         newButton.irCarrierFrequency = buttonCarrierFrequency;
                         newButton.buttonIndex = buttonIndex;
 
@@ -323,7 +323,7 @@ int addButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequ
 
             // Create the new button entry
             initNewButtonEntry(&newButton, BUTTON_NAME_MAX_SIZE);
-            strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE);
+            strncpy(newButton.buttonName, (char*)buttonName, BUTTON_NAME_MAX_SIZE-1);
             newButton.irCarrierFrequency = buttonCarrierFrequency;
             newButton.buttonIndex = buttonIndex;
 
