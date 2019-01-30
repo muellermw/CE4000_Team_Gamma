@@ -207,8 +207,76 @@ int main(void)
             arg2 = strtok(NULL, delim);
             toLower(strState);
 
+            // SEND_BUTTON: Sends button with IR and reports back to app
+            if(strncmp(strState, SEND_BUTTON_STR, strlen(SEND_BUTTON_STR)) == 0){
+
+                // Check if the button name argument is not empty
+                if (arg1[0] != NULL)
+                {
+                    int button_index = atoi(arg2);
+
+                    // Compare the name of the button the client wants to delete with
+                    // the name of the button that was stored at the button index. If
+                    // it does not match, send a message telling the client that their
+                    // button database is out-of-date and should be updated.
+                    if (compareButtonNames(arg1, button_index) == 0)
+                    {
+                        bool error = true;
+
+                        // Stop any IR detection while sending a button signal
+                        IRstopEdgeDetectGPIO();
+                        currState = send_button;
+
+                        SignalInterval* irSequence = getButtonSignalInterval(button_index);
+                        if (irSequence != NULL)
+                        {
+                            int carrFreq = getButtonCarrierFrequency(button_index);
+
+                            if (carrFreq != FILE_IO_ERROR)
+                            {
+                                // Send out the signal
+                                IRemitterSendButton(irSequence, carrFreq);
+
+                                // Indicate success status
+                                error = false;
+
+                                sprintf(sendBuf, "\r\nbutton_sent,%s,%d\r\n", arg1, button_index);
+                                Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
+                                if( strlen(sendBuf) != Status )
+                                {
+                                    UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+                                }
+                            }
+                        }
+
+                        // Send an error message if something went wrong
+                        if (error)
+                        {
+                            sprintf(sendBuf, "\r\n%s\r\n", BUTTON_SEND_ERROR);
+                            Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
+                            if( strlen(sendBuf) != Status )
+                            {
+                                UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+                            }
+                        }
+
+                        // Start edge detection again, as we are going into an idle state
+                        IRstartEdgeDetectGPIO();
+                        currState = idle;
+                    }
+                    else
+                    {
+                        sprintf(sendBuf, "\r\n%s\r\n", BTN_NOT_AVAILABLE);
+                        Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
+                        if( strlen(sendBuf) != Status )
+                        {
+                            UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+                        }
+                    }
+                }
+            }
             // APP_INIT: Provide the app with the device IP and Name
-            if(strncmp(strState, APP_INIT_STR, strlen(APP_INIT_STR)) == 0){
+            else if(strncmp(strState, APP_INIT_STR, strlen(APP_INIT_STR)) == 0){
 
                 // Get the obtained IP of the device
                 uint16_t len = sizeof(SlNetCfgIpV4Args_t);
@@ -365,74 +433,6 @@ int main(void)
                     }
                 }
             }
-            // SEND_BUTTON: Sends button with IR and reports back to app
-            else if(strncmp(strState, SEND_BUTTON_STR, strlen(SEND_BUTTON_STR)) == 0){
-
-                // Check if the button name argument is not empty
-                if (arg1[0] != NULL)
-                {
-                    int button_index = atoi(arg2);
-
-                    // Compare the name of the button the client wants to delete with
-                    // the name of the button that was stored at the button index. If
-                    // it does not match, send a message telling the client that their
-                    // button database is out-of-date and should be updated.
-                    if (compareButtonNames(arg1, button_index) == 0)
-                    {
-                        bool error = true;
-
-                        // Stop any IR detection while sending a button signal
-                        IRstopEdgeDetectGPIO();
-                        currState = send_button;
-
-                        SignalInterval* irSequence = getButtonSignalInterval(button_index);
-                        if (irSequence != NULL)
-                        {
-                            int carrFreq = getButtonCarrierFrequency(button_index);
-
-                            if (carrFreq != FILE_IO_ERROR)
-                            {
-                                // Send out the signal
-                                IRemitterSendButton(irSequence, carrFreq);
-
-                                // Indicate success status
-                                error = false;
-
-                                sprintf(sendBuf, "\r\nbutton_sent,%s,%d\r\n", arg1, button_index);
-                                Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
-                                if( strlen(sendBuf) != Status )
-                                {
-                                    UART_PRINT("\r\n%s\r\n", SEND_ERROR);
-                                }
-                            }
-                        }
-
-                        // Send an error message if something went wrong
-                        if (error)
-                        {
-                            sprintf(sendBuf, "\r\n%s\r\n", BUTTON_SEND_ERROR);
-                            Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
-                            if( strlen(sendBuf) != Status )
-                            {
-                                UART_PRINT("\r\n%s\r\n", SEND_ERROR);
-                            }
-                        }
-
-                        // Start edge detection again, as we are going into an idle state
-                        IRstartEdgeDetectGPIO();
-                        currState = idle;
-                    }
-                    else
-                    {
-                        sprintf(sendBuf, "\r\n%s\r\n", BTN_NOT_AVAILABLE);
-                        Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
-                        if( strlen(sendBuf) != Status )
-                        {
-                            UART_PRINT("\r\n%s\r\n", SEND_ERROR);
-                        }
-                    }
-                }
-            }
             // CLEAR_ALL: Deletes all buttons on the device
             else if(strncmp(strState, CLEAR_BUTTONS_STR, strlen(CLEAR_BUTTONS_STR)) == 0){
                 deleteAllButtons();
@@ -453,13 +453,14 @@ int compareButtonNames(char* suppliedName, uint8_t buttonIndex)
     char btnNameBuff[BUTTON_NAME_MAX_SIZE];
     getButtonName(buttonIndex, btnNameBuff);
 
-    // TODO Change the -1 on the strlen when moving to the app format,
-    // right now it gets rid of the newline character during the comparison
-    uint8_t btnNameLength = strlen(suppliedName)-1;
+    // TODO Change the -1 to +1 on the btnNameLength when moving to the app format,
+    // right now it gets rid of the newline character during the comparison,
+    // but later we want it to compare the entire string including the NULL terminator
+    uint8_t btnNameLength = strlen(suppliedName);
 
     if (btnNameLength <= BUTTON_NAME_MAX_SIZE)
     {
-        if (strncmp(suppliedName, btnNameBuff, btnNameLength) == 0)
+        if (strncmp(suppliedName, btnNameBuff, btnNameLength-1) == 0)
         {
             RetVal = 0;
         }
