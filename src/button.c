@@ -466,6 +466,54 @@ int getButtonCarrierFrequency(_u16 buttonIndex)
 }
 
 /**
+ * This function gets the name of the IR button at the given index
+ * @param buttonIndex the index to get the button name out of
+ * @param nameBuffer the buffer to fill with the button name
+ */
+void getButtonName(_u16 buttonIndex, char* nameBuffer)
+{
+    bool error = true;
+
+    if ((buttonIndex <= MAX_AMOUNT_OF_BUTTONS) && (nameBuffer != NULL))
+    {
+        int tableSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
+
+        // Make sure the button table file contains valid data at this offset
+        if (tableSize >= ((buttonIndex+1)*sizeof(ButtonTableEntry)))
+        {
+            // Open the button table file for reading
+            int fd = fsOpenFile(BUTTON_TABLE_FILE, flash_read);
+
+            if (fd != FILE_IO_ERROR)
+            {
+                _u16 offset = (buttonIndex*sizeof(ButtonTableEntry));
+                ButtonTableEntry buttonEntry;
+                initNewButtonEntry(&buttonEntry, BUTTON_NAME_MAX_SIZE);
+
+                // Read in the button entry at that index
+                fsReadFile(fd, &buttonEntry, offset, sizeof(ButtonTableEntry));
+                fsCloseFile(fd);
+
+                // Make sure the button name is valid
+                if (buttonEntry.buttonName[0] != NULL)
+                {
+                    strncpy(nameBuffer, (char *)(buttonEntry.buttonName), BUTTON_NAME_MAX_SIZE);
+
+                    // Set OK error condition
+                    error = false;
+                }
+            }
+        }
+    }
+    // Check if the method did not finish correctly
+    if (error)
+    {
+        // Make sure the first char in the input buffer is set to NULL to indicate failure
+        nameBuffer[0] = NULL;
+    }
+}
+
+/**
  * This method makes sure that the button table of contents
  * exists, and creates it if it doesn't.
  */

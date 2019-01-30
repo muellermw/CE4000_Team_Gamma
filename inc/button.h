@@ -32,6 +32,7 @@ int addButtonTableEntry(const unsigned char* buttonName, _u16 buttonCarrierFrequ
 int deleteButtonTableEntry(_u16 buttonIndex);
 int findNumButtonEntries(ButtonTableEntry* entryList, _u32 fileSize);
 int getButtonCarrierFrequency(_u16 buttonIndex);
+void getButtonName(_u16 buttonIndex, char* nameBuffer);
 void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 ButtonTableEntry* retrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 SignalInterval* getButtonSignalInterval(_u16 buttonIndex);
