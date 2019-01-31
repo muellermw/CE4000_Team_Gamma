@@ -150,7 +150,8 @@ int main(void)
     Addr.sin_family = SL_AF_INET;
     Addr.sin_port = sl_Htons(44444);
     Addr.sin_addr.s_addr = SL_INADDR_ANY;
-    Status = sl_Bind(Sd, ( SlSockAddr_t *)&Addr, sizeof(SlSockAddrIn_t));
+    SlSocklen_t AddrSize = sizeof(SlSockAddrIn_t);
+    Status = sl_Bind(Sd, ( SlSockAddr_t *)&Addr, AddrSize);
     if( Status )
     {
         UART_PRINT("\r\n%s\r\n", BINDING_ERROR);
@@ -184,8 +185,12 @@ int main(void)
             memset(sendBuf, NULL, sizeof(sendBuf));
         }
 
+        // Reinitialize address structure to avoid potential errors
+        Addr.sin_family = SL_AF_INET;
+        Addr.sin_port = sl_Htons(44444);
+        Addr.sin_addr.s_addr = SL_INADDR_ANY;
+
         // Receive data from the network
-        SlSocklen_t AddrSize = sizeof(SlSockAddrIn_t);
         Status = sl_RecvFrom(Sd, recBuf, BUFF_SIZE, 0, ( SlSockAddr_t *)&Addr, &AddrSize);
         if(Status < 0 && Status != SL_EAGAIN)
         {
@@ -492,34 +497,37 @@ char* createButtonRefreshBuffer()
         {
             uint8_t numEntries = findNumButtonEntries(buttonTable, buttonTableSize);
 
-            // Allocate the maximum theoretical buffer for the entries
-            refreshBuff = malloc((refreshEntryMaxSize * numEntries) + 1);
-
-            if (refreshBuff != NULL)
+            if (numEntries > 0)
             {
-                uint8_t i = 0;
-                uint8_t entryIndex = 0;
-                char* offset = refreshBuff;
-                char entryStringBuff[refreshEntryMaxSize];
+                // Allocate the maximum theoretical buffer for the entries
+                refreshBuff = malloc((refreshEntryMaxSize * numEntries) + 1);
 
-                // Loop though the button entries to fill the buffer
-                while (i < numEntries)
+                if (refreshBuff != NULL)
                 {
-                    // Make sure each button entry is valid, skip it if not
-                    if (buttonTable[entryIndex].buttonName[0] != NULL)
+                    uint8_t i = 0;
+                    uint8_t entryIndex = 0;
+                    char* offset = refreshBuff;
+                    char entryStringBuff[refreshEntryMaxSize];
+
+                    // Loop though the button entries to fill the buffer
+                    while (i < numEntries)
                     {
-                        sprintf(entryStringBuff, "%s,%d\r\n", (char *)(buttonTable[entryIndex].buttonName), buttonTable[entryIndex].buttonIndex);
-                        uint8_t entryLength = strlen(entryStringBuff);
+                        // Make sure each button entry is valid, skip it if not
+                        if (buttonTable[entryIndex].buttonName[0] != NULL)
+                        {
+                            sprintf(entryStringBuff, "%s,%d\r\n", (char *)(buttonTable[entryIndex].buttonName), buttonTable[entryIndex].buttonIndex);
+                            uint8_t entryLength = strlen(entryStringBuff);
 
-                        // Add +1 for the NULL character that strlen didn't account for
-                        memcpy(offset, entryStringBuff, entryLength + 1);
+                            // Add +1 for the NULL character that strlen didn't account for
+                            memcpy(offset, entryStringBuff, entryLength + 1);
 
-                        // Increment the offset by the string length of the entry string
-                        offset += entryLength;
-                        i++;
+                            // Increment the offset by the string length of the entry string
+                            offset += entryLength;
+                            i++;
+                        }
+                        // Always increment the entry index
+                        entryIndex++;
                     }
-                    // Always increment the entry index
-                    entryIndex++;
                 }
             }
             free(buttonTable);
