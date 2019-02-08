@@ -458,14 +458,12 @@ int compareButtonNames(char* suppliedName, uint8_t buttonIndex)
     char btnNameBuff[BUTTON_NAME_MAX_SIZE];
     getButtonName(buttonIndex, btnNameBuff);
 
-    // TODO Change the -1 to +1 on the btnNameLength when moving to the app format,
-    // right now it gets rid of the newline character during the comparison,
-    // but later we want it to compare the entire string including the NULL terminator
     uint8_t btnNameLength = strlen(suppliedName);
 
     if (btnNameLength <= BUTTON_NAME_MAX_SIZE)
     {
-        if (strncmp(suppliedName, btnNameBuff, btnNameLength-1) == 0)
+        // Add +1 to name length to compare null character as well
+        if (strncmp(suppliedName, btnNameBuff, btnNameLength+1) == 0)
         {
             RetVal = 0;
         }
