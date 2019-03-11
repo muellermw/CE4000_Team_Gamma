@@ -1,8 +1,10 @@
-/*
- * wifi.h
- *
- *  Created on: Jan 3, 2019
- *      Author: Marcus
+/**
+ * This header file utilizes TI and other custom firmware to implement WiFi provisioning
+ * and general WiFi event control flow. wifi_init is called by the main program at
+ * startup, and does not return until the board has connected to an AP.
+ * @file wifi.h
+ * @date 3/10/2019
+ * @author: Marcus Mueller
  */
 
 #ifndef INC_WIFI_H_
@@ -19,7 +21,5 @@
 //#define USE_NCIR_SSID
 
 void wifi_init();
-void wifiStartWLANProvisioning();
-int32_t wifiProvisioning();
 
 #endif /* INC_WIFI_H_ */

@@ -1,8 +1,10 @@
-/*
- * wifi.c
- *
- *  Created on: Jan 3, 2019
- *      Author: Marcus
+/**
+ * This file utilizes TI and other custom firmware to implement WiFi provisioning
+ * and general WiFi event control flow. wifi_init is called by the main program at
+ * startup, and does not return until the board has connected to an AP.
+ * @file wifi.c
+ * @date 3/10/2019
+ * @author: Marcus Mueller
  */
 
 // Driver Header files
@@ -16,13 +18,28 @@
 #include "Board.h"
 #include "wifi.h"
 #include "uart_term.h"
+#include "Misc_Timer.h"
 
 static int initSlDevice = 1;
 static int wlanConnectToRouter = 1;
+
+// Flag to signal user (phone app) provisioning
 static int wlanNeedUserProvision = 0;
+static int wlanConnectedToAP = 0;
 
+// Flag to signal if board is undergoing a reset cycle - this cannot be interrupted!
+static int boardRestarting = 0;
+static uint8_t timeoutCount = 0;
+
+static void wifiStartWLANProvisioning();
+static int32_t wifiProvisioning();
 static int32_t InitSimplelink(uint8_t const role);
+static void resetBoard();
+static void WiFiProvisionTimeoutHandler(Timer_Handle handle);
 
+/**
+ * Initialize the WiFi subsystem and ensure a connection before returning
+ */
 void wifi_init()
 {
     GPIO_init();
@@ -35,6 +52,15 @@ void wifi_init()
     wifiStartWLANProvisioning();
 }
 
+/**
+ * A simple state machine that allows user provisioning or immediate
+ * connection to an AP, depending on startup conditions
+ *
+ * STATE MACHINE:
+ * 1) Initialize the WiFi subsystem
+ * 2) If a connection is available, establish a connection
+ * 3) If a connection is not available, start user provisioning by creating an AP on the board
+ */
 void wifiStartWLANProvisioning()
 {
     while (wlanConnectToRouter || wlanNeedUserProvision)
@@ -52,13 +78,73 @@ void wifiStartWLANProvisioning()
             InitSimplelink(0);
         }
 
+        // If the WiFi subsystem determines that the board needs to be user provisioned, it is started here
         if (wlanNeedUserProvision && !initSlDevice)
         {
             wifiProvisioning();
         }
     }
+
+    // Set the flag that tells the WiFi system that the board was at one point connected to an AP
+    wlanConnectedToAP = 1;
 }
 
+/**
+ * This method was created by TI and slightly modified for this application. It initializes
+ * the WiFi subsystem into a functional configuration before returning.
+ * @param role - the role to set the SimpleLink chip (typically 0 for host station)
+ * @return status - 0 for OK, negative value for error
+ */
+static int32_t InitSimplelink(uint8_t const role)
+{
+    int32_t retVal = -1;
+
+    if((retVal = sl_Start(0, 0, 0)) == SL_ERROR_RESTORE_IMAGE_COMPLETE)
+    {
+        UART_PRINT("sl_Start Failed\r\n");
+        UART_PRINT(
+            "\r\n**********************************\r\n"
+            "Return to Factory Default been Completed\r\nPlease RESET the Board\r\n"
+            "**********************************\r\n");
+        while(1){}
+    }
+
+    if(SL_RET_CODE_PROVISIONING_IN_PROGRESS == retVal)
+    {
+        UART_PRINT(" [ERROR] Provisioning is already running, stopping current session...\r\n");
+        retVal = sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
+        retVal = sl_Start(0, 0, 0);
+    }
+
+    if(retVal == role)
+    {
+        UART_PRINT("SimpleLinkInitCallback: started in role %d\r\n", retVal);
+    }
+    else
+    {
+        UART_PRINT("SimpleLinkInitCallback: started in role %d, set the requested role %d\r\n", retVal, role);
+        retVal = sl_WlanSetMode(role);
+        retVal = sl_Stop(NWP_STOP_TIMEOUT);
+        retVal = sl_Start(0, 0, 0);
+
+        if(retVal != role)
+        {
+            UART_PRINT("SimpleLinkInitCallback: error setting role %d, status=%d\r\n", role, retVal);
+        }
+
+        UART_PRINT("SimpleLinkInitCallback: restarted in role %d\r\n", role);
+    }
+
+    initSlDevice = 0;
+    return(retVal);
+}
+
+/**
+ * This method was created by TI and modified for this application. It sets up the WiFi subsystem
+ * in order to initialize the provisioning process. Depending on defined constants, a different
+ * WiFi access point SSID will be used to identify the board.
+ * @return 0 on success, negative value on failure
+ */
 int32_t wifiProvisioning()
 {
     int32_t retVal = 0;
@@ -111,7 +197,7 @@ int32_t wifiProvisioning()
 
 
     /**************************************************************************
-     * CODE TO CHANGE THE Access Point SSID
+     * CODE TO CHANGE THE ACCESS POINT SSID
      *************************************************************************/
 #ifdef USE_NCIR_SSID
     int newSsidSize = sizeof("NCIR-XXXXXX");
@@ -161,54 +247,47 @@ int32_t wifiProvisioning()
 
     wlanNeedUserProvision = 0;
     wlanConnectToRouter = 1;
-    return(0);
+    return(retVal);
 }
 
-static int32_t InitSimplelink(uint8_t const role)
+/**
+ * This method uses the board's power system to reset the board and restart the program
+ * @note This is very useful when issues with WiFi connections arise. This allows users
+ *       to re-provision the board in multiple failure instances
+ */
+static void resetBoard()
 {
-    int32_t retVal = -1;
-
-    if((retVal = sl_Start(0, 0, 0)) == SL_ERROR_RESTORE_IMAGE_COMPLETE)
+    if (boardRestarting == 0)
     {
-        UART_PRINT("sl_Start Failed\r\n");
-        UART_PRINT(
-            "\r\n**********************************\r\nReturn to Factory "
-            "Default been Completed\r\nPlease RESET the Board\r\n"
-            "**********************************\r\n");
-        while(1)
-        {
-            ;
-        }
+        boardRestarting = 1;
+        sl_Stop(NWP_STOP_TIMEOUT);
+        GPIO_write(Board_PAIRING_OUTPUT_PIN, 1);
+
+        // Reset the MCU in order allow the WiFi changes to take place
+        MAP_PRCMHibernateCycleTrigger();
     }
+}
 
-    if(SL_RET_CODE_PROVISIONING_IN_PROGRESS == retVal)
+/**
+ * While provisioning, restart the program if provisioning has not completed for a certain amount of time
+ * @param handle The timer handle (not used, but necessary for the timer callback)
+ */
+static void WiFiProvisionTimeoutHandler(Timer_Handle handle)
+{
+    // Want to time out after 10 minutes, so check that the count is < 20
+    // (30 seconds * 20 = 600 seconds)
+    if (timeoutCount < 20)
     {
-        UART_PRINT(" [ERROR] Provisioning is already running, stopping current session...\r\n");
-        retVal = sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
-        retVal = sl_Start(0, 0, 0);
-    }
-
-    if(retVal == role)
-    {
-        UART_PRINT("SimpleLinkInitCallback: started in role %d\r\n", retVal);
+        timeoutCount++;
+        startMiscOneShotTimer();
     }
     else
     {
-        UART_PRINT("SimpleLinkInitCallback: started in role %d, set the requested role %d\r\n", retVal, role);
-        retVal = sl_WlanSetMode(role);
-        retVal = sl_Stop(NWP_STOP_TIMEOUT);
-        retVal = sl_Start(0, 0, 0);
+        timeoutCount = 0;
 
-        if(retVal != role)
-        {
-            UART_PRINT("SimpleLinkInitCallback: error setting role %d, status=%d\r\n", role, retVal);
-        }
-
-        UART_PRINT("SimpleLinkInitCallback: restarted in role %d\r\n", role);
+        // Full timeout - reset the board
+        resetBoard();
     }
-
-    initSlDevice = 0;
-    return(retVal);
 }
 
 
@@ -218,17 +297,7 @@ static int32_t InitSimplelink(uint8_t const role)
  * and some will be left unused by our app.
  ***********************************************/
 
-/*!
-   \brief          This function handles general events
-   \param[in]      pDevEvent - Pointer to structure containing general event info
-   \return         None
- */
-void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *pDevEvent)
-{
-
-}
-
-/*
+/**
  *  \brief      This function handles WLAN async events
  *  \param[in]  pWlanEvent - Pointer to the structure containing WLAN event info
  *  \return     None
@@ -259,8 +328,6 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
                    pWlanEvent->Data.Connect.Bssid[4],
                    pWlanEvent->Data.Connect.Bssid[5]);
     }
-
-    wlanConnectToRouter = 0;
     break;
 
     case SL_WLAN_EVENT_DISCONNECT:
@@ -328,10 +395,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             UART_PRINT(
                 " [Provisioning] Profile Confirmation failed (Connection "
                 "Success, feedback to Smartphone app failed)\r\n");
-            sl_Stop(NWP_STOP_TIMEOUT);
-            GPIO_write(Board_PAIRING_OUTPUT_PIN, 1);
-            // Reset the MCU in order allow the WiFi changes to take place
-            MAP_PRCMHibernateCycleTrigger();
+            resetBoard();
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_SUCCESS:
@@ -340,8 +404,30 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 
         case SL_WLAN_PROVISIONING_AUTO_STARTED:
             UART_PRINT(" [Provisioning] Auto-Provisioning Started\r\n");
-            sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
-            wlanNeedUserProvision = 1;
+
+            // Auto-provisioning has been started outside of the WiFi initialization loop. This means the
+            // board has been disconnected for a long period of time. If this happens, reset the board
+            // to attempt to reconnect, or allow the user to re-provision this device
+            if (wlanConnectedToAP == 1)
+            {
+                resetBoard();
+            }
+            else
+            {
+                // Let the WiFi system know that the board needs a user provision
+                wlanNeedUserProvision = 1;
+
+                // Stop auto-provisioning in order to start the custom provisioning provided by TI code in this file
+                sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
+
+                // Start a provisioning timer in order to cycle the device if the limit is reached
+                initMiscOneShotTimer();
+                setMiscOneShotTimerCallback(WiFiProvisionTimeoutHandler);
+                setMiscOneShotTimeout(30*1000000);
+                startMiscOneShotTimer();
+                timeoutCount = 0;
+            }
+
             break;
 
         case SL_WLAN_PROVISIONING_STOPPED:
@@ -353,9 +439,13 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
                     UART_PRINT(
                         "Connected to SSID: %s\r\n",
                         pWlanEvent->Data.ProvisioningStatus.Ssid);
-                }
 
-                wlanConnectToRouter = 0;
+                    // Stop the provisioning timeout timer
+                    stopMiscOneShotTimer();
+
+                    // Successful provisioning: move on to main program
+                    wlanConnectToRouter = 0;
+                }
             }
             break;
 
@@ -396,17 +486,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
     }
 }
 
-/*!
- *  \brief       The Function Handles the Fatal errors
- *  \param[in]  pFatalErrorEvent - Contains the fatal error data
- *  \return     None
- */
-void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *slFatalErrorEvent)
-{
-
-}
-
-/*!
+/**
  *  \brief      This function handles network events such as IP acquisition, IP
  *              leased, IP released etc.
  * \param[in]   pNetAppEvent - Pointer to the structure containing acquired IP
@@ -425,6 +505,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 
     switch(pNetAppEvent->Id)
     {
+    case SL_NETAPP_EVENT_IPV6_ACQUIRED:
     case SL_NETAPP_EVENT_IPV4_ACQUIRED:
     {
         UART_PRINT("IPv4 acquired: IP = %d.%d.%d.%d\r\n", \
@@ -441,6 +522,11 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                                          1), \
                    (uint8_t)SL_IPV4_BYTE(pNetAppEventData->IpAcquiredV4.Gateway,
                                          0));
+        // Stop the provisioning timeout timer
+        stopMiscOneShotTimer();
+
+        // When we acquire an IP, let the WiFi connection loop know the board is connected to an AP
+        wlanConnectToRouter = 0;
     }
     break;
 
@@ -461,7 +547,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
     }
 }
 
-/*!
+/**
  *  \brief      This function handles ping init-complete event from SL
  *  \param[in]  status - Mode the device is configured in..!
  *  \param[in]  DeviceInitInfo - Device initialization information
@@ -488,17 +574,37 @@ void SimpleLinkInitCallback(uint32_t status, SlDeviceInitInfo_t *DeviceInitInfo)
     UART_PRINT("Device More Data: 0x%08X\r\n", DeviceInitInfo->MoreData);
 }
 
-/*!
+/**
+   \brief          This function handles general events
+   \param[in]      pDevEvent - Pointer to structure containing general event info
+   \return         None
+ */
+void SimpleLinkGeneralEventHandler(SlDeviceEvent_t *pDevEvent)
+{
+    // Unused in this application
+}
+
+/**
+ *  \brief       The Function Handles the Fatal errors
+ *  \param[in]  pFatalErrorEvent - Contains the fatal error data
+ *  \return     None
+ */
+void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *slFatalErrorEvent)
+{
+    // Unused in this application
+}
+
+/**
  *  \brief      This function handles ping report events
  *  \param[in]  pPingReport - Pointer to the structure containing ping report
  *  \return     None
  */
 void SimpleLinkPingReport(SlNetAppPingReport_t *pPingReport)
 {
-
+    // Unused in this application
 }
 
-/*!
+/**
  *  \brief      This function gets triggered when HTTP Server receives
  *              application defined GET and POST HTTP tokens.
  *  \param[in]  pHttpServerEvent Pointer indicating HTTP server event
@@ -507,10 +613,10 @@ void SimpleLinkPingReport(SlNetAppPingReport_t *pPingReport)
  */
 void SimpleLinkHttpServerEventHandler(SlNetAppHttpServerEvent_t *pHttpEvent, SlNetAppHttpServerResponse_t *pHttpResponse)
 {
-    /* Unused in this application */
+    // Unused in this application
 }
 
-/*!
+/**
  *  \brief      This function handles resource request
  *  \param[in]  pNetAppRequest - Contains the resource requests
  *  \param[in]  pNetAppResponse - Should be filled by the user with the
@@ -520,31 +626,31 @@ void SimpleLinkHttpServerEventHandler(SlNetAppHttpServerEvent_t *pHttpEvent, SlN
 void SimpleLinkNetAppRequestHandler(SlNetAppRequest_t  *pNetAppRequest,
                                     SlNetAppResponse_t *pNetAppResponse)
 {
-    /* Unused in this application */
+    // Unused in this application
 }
 
-/*!
+/**
  *  \brief      This function handles socket events indication
  *  \param[in]  pSock - Pointer to the structure containing socket event info
  *  \return     None
  */
 void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
 {
-
+    // Unused in this application
 }
 
 void SimpleLinkSocketTriggerEventHandler(SlSockTriggerEvent_t *pSlTriggerEvent)
 {
-    /* Unused in this application */
+    // Unused in this application
 }
 
 void SimpleLinkNetAppRequestMemFreeEventHandler(uint8_t *buffer)
 {
-    /* do nothing... */
+    // Unused in this application
 }
 
 void SimpleLinkNetAppRequestEventHandler(SlNetAppRequest_t *pNetAppRequest,
                                          SlNetAppResponse_t *pNetAppResponse)
 {
-    /* do nothing... */
+    // Unused in this application
 }

@@ -90,6 +90,7 @@ bool emitterReady = false;
 bool mainSendButton = false;
 bool mainDeleteButton = false;
 
+
 /*
  *  ======== main ========
  */
@@ -567,6 +568,7 @@ void gpioButtonFxnSW3(uint_least8_t index)
         mainSendButton = true;
     }
 }
+
 
 #ifdef DEBUG_SESSION
 void fileSystemTestCode()
