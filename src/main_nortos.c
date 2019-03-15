@@ -164,6 +164,11 @@ int main(void)
     enableOption.NonBlockingEnabled = 1;
     sl_SetSockOpt(Sd,SL_SOL_SOCKET,SL_SO_NONBLOCKING, (_u8 *)&enableOption,sizeof(enableOption));
 
+    // Within the network processor, UDP TX packets are buffered due to how the WiFi standard works.
+    // Because of this, UDP packet reception times may vary significantly. This power setting policy is
+    // utilized to maintain a much more consistent UDP reception time, and thus a more "snappy" application.
+    sl_WlanPolicySet(SL_WLAN_POLICY_PM , SL_WLAN_ALWAYS_ON_POLICY, NULL, 0);
+
     ControlState currState = idle;
     while (1)
     {
