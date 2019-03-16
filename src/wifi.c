@@ -30,6 +30,7 @@ static int wlanConnectedToAP = 0;
 // Flag to signal if board is undergoing a reset cycle - this cannot be interrupted!
 static int boardRestarting = 0;
 static uint8_t timeoutCount = 0;
+static uint8_t timeoutMax = 20;
 
 static void wifiStartWLANProvisioning();
 static int32_t wifiProvisioning();
@@ -237,7 +238,7 @@ int32_t wifiProvisioning()
         UART_PRINT("\r\n Provisioning Command = %d \r\n\r\n",provisioningCmd);
     }
 
-    /* start provisioning */
+    // start provisioning
     retVal = sl_WlanProvisioning(provisioningCmd, ROLE_STA, PROVISIONING_INACTIVITY_TIMEOUT, NULL, 0);
 
     if(retVal < 0)
@@ -260,8 +261,8 @@ static void resetBoard()
     if (boardRestarting == 0)
     {
         boardRestarting = 1;
-        sl_Stop(NWP_STOP_TIMEOUT);
         GPIO_write(Board_PAIRING_OUTPUT_PIN, 1);
+        sl_Stop(NWP_STOP_TIMEOUT);
 
         // Reset the MCU in order allow the WiFi changes to take place
         MAP_PRCMHibernateCycleTrigger();
@@ -276,13 +277,15 @@ static void WiFiProvisionTimeoutHandler(Timer_Handle handle)
 {
     // Want to time out after 10 minutes, so check that the count is < 20
     // (30 seconds * 20 = 600 seconds)
-    if (timeoutCount < 20)
+    if (timeoutCount < timeoutMax)
     {
         timeoutCount++;
+        UART_PRINT("Provisioning timeouts left: %d\r\n", timeoutMax - timeoutCount);
         startMiscOneShotTimer();
     }
     else
     {
+        UART_PRINT("Restarting Board!!\r\n");
         timeoutCount = 0;
 
         // Full timeout - reset the board
@@ -357,6 +360,10 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             UART_PRINT(" [Provisioning] Profile Added: PrivateToken:%s\r\n",
                        pWlanEvent->Data.ProvisioningProfileAdded.Reserved);
         }
+
+        // Stop the provisioning timeout timer
+        stopMiscOneShotTimer();
+
         break;
 
     case SL_WLAN_EVENT_PROVISIONING_STATUS:
@@ -408,7 +415,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             // Auto-provisioning has been started outside of the WiFi initialization loop. This means the
             // board has been disconnected for a long period of time. If this happens, reset the board
             // to attempt to reconnect, or allow the user to re-provision this device
-            if (wlanConnectedToAP == 1)
+            if (wlanConnectedToAP == 1 || timeoutCount != 0)
             {
                 resetBoard();
             }
@@ -425,7 +432,6 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
                 setMiscOneShotTimerCallback(WiFiProvisionTimeoutHandler);
                 setMiscOneShotTimeout(30*1000000);
                 startMiscOneShotTimer();
-                timeoutCount = 0;
             }
 
             break;
@@ -445,6 +451,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 
                     // Successful provisioning: move on to main program
                     wlanConnectToRouter = 0;
+                    timeoutCount = 0;
                 }
             }
             break;
@@ -527,6 +534,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 
         // When we acquire an IP, let the WiFi connection loop know the board is connected to an AP
         wlanConnectToRouter = 0;
+        timeoutCount = 0;
     }
     break;
 
