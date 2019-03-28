@@ -15,11 +15,14 @@
 #define SL_EAGAIN -11
 #define PROVISIONING_INACTIVITY_TIMEOUT 3600
 #define NWP_STOP_TIMEOUT 1000
-#define DEVICE_NAME_LENGTH 33
+#define DEVICE_NAME_LENGTH 33 // +1 for NULL char
+#define DEVICE_SSID_LENGTH 32
+#define DEFAULT_DEVICE_NAME "mysimplelink"
 
 // Uncomment this line to use our SSID for the Access Point
 //#define USE_NCIR_SSID
 
 void wifi_init();
+int32_t simplelink_init(uint8_t const role);
 
 #endif /* INC_WIFI_H_ */

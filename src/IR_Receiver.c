@@ -1,7 +1,7 @@
 /**
  * IR_Receiver.c
  *
- * Authors: Max Kallenberger, Marcus Mueller
+ * This is the control mechanism for repeating and learning IR commands
  *
  * Receiver is GPIO 15 (PIN 6) for the capture timer, GPIO 14 (PIN 5) for the passthrough interrupt.
  */
@@ -18,14 +18,6 @@
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
 
-void IRinitSignalCapture();
-void IRstartSignalCapture();
-void IRstopSignalCapture();
-void IRinitEdgeDetectGPIO();
-void IRedgeDetectionPassthrough(uint_least8_t index);
-void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
-static void ConvertToUs(SignalInterval *seq, uint32_t length);
-
 Receiver_Mode receiverState;
 static Capture_Handle captureHandle;
 static Capture_Params captureParams;
@@ -38,6 +30,15 @@ static int32_t seqIndex = -1;
 static uint32_t totalCaptureTime = 0;
 static bool irGapDetected = false;
 static bool buttonCaptured = false;
+
+static void IRinitSignalCapture();
+static void IRstartSignalCapture();
+static void IRstopSignalCapture();
+static void IRinitEdgeDetectGPIO();
+static void ConvertToUs(SignalInterval *seq, uint32_t length);
+
+void IRedgeDetectionPassthrough(uint_least8_t index);
+void IRedgeProgramButton(Capture_Handle handle, uint32_t interval);
 
 /**
  * Initial setup of the IR receiver and its peripherals
@@ -178,67 +179,6 @@ void IRedgeProgramButton(Capture_Handle handle, uint32_t interval)
 }
 
 /**
- * Initialize the input capture timer (should only be called once)
- */
-void IRinitSignalCapture()
-{
-    // Set up input capture clock on pin 50 [subject to change]
-    Capture_init();
-    // Set up capture timer parameters
-    Capture_Params_init(&captureParams);
-    captureParams.mode  = Capture_ANY_EDGE;
-    captureParams.callbackFxn = IRedgeProgramButton;
-    captureParams.periodUnit = Capture_PERIOD_COUNTS;
-    captureHandle = Capture_open(Board_CAPTURE0, &captureParams);
-    // Make sure this capture timer is not running yet
-    Capture_stop(captureHandle);
-}
-
-/**
- * Initialize the edge detect GPIO interrupt passthrough (should only be called once)
- */
-void IRinitEdgeDetectGPIO()
-{
-    GPIO_setConfig(Board_IR_EDGE_DETECT_PIN, GPIO_CFG_IN_NOPULL | GPIO_CFG_IN_INT_BOTH_EDGES);
-    GPIO_setCallback(Board_IR_EDGE_DETECT_PIN, IRedgeDetectionPassthrough);
-    // Force the interrupt to be disabled until IRstartEdgeDetectGPIO is called
-    GPIO_disableInt(Board_IR_EDGE_DETECT_PIN);
-}
-
-/**
- * Enable the passthrough IR GPIO interrupt to start directly recreating any signals detected
- */
-void IRstartEdgeDetectGPIO()
-{
-    GPIO_enableInt(Board_IR_EDGE_DETECT_PIN);
-}
-
-/**
- * Disable the passthrough interrupt
- */
-void IRstopEdgeDetectGPIO()
-{
-    GPIO_disableInt(Board_IR_EDGE_DETECT_PIN);
-}
-
-/**
- * Start the input capture timer interrupt to learn IR codes
- */
-void IRstartSignalCapture()
-{
-    Capture_start(captureHandle);
-}
-
-/**
- * Stops the input capture timer and closes the capture driver instance so
- * the callback function for the timer interrupt can be reassigned
- */
-void IRstopSignalCapture()
-{
-    Capture_stop(captureHandle);
-}
-
-/**
  * Switch the receiver mode based on what state we are in
  */
 void IRreceiverSetMode(Receiver_Mode mode)
@@ -259,6 +199,22 @@ void IRreceiverSetMode(Receiver_Mode mode)
 }
 
 /**
+ * Enable the passthrough IR GPIO interrupt to start directly recreating any signals detected
+ */
+void IRstartEdgeDetectGPIO()
+{
+    GPIO_enableInt(Board_IR_EDGE_DETECT_PIN);
+}
+
+/**
+ * Disable the passthrough interrupt
+ */
+void IRstopEdgeDetectGPIO()
+{
+    GPIO_disableInt(Board_IR_EDGE_DETECT_PIN);
+}
+
+/**
  * Get the IR sequence in addition to its size
  * @param  sequenceSize the pointer to an integer where the sequence size will be stored
  *         NOTE: sequence size is in BYTES
@@ -270,6 +226,10 @@ SignalInterval* getIRsequence(uint16_t* sequenceSize)
     return &irSequence[0];
 }
 
+/**
+ * Gets the carrier frequency of the last captured IR signal
+ * @return The IR carrier frequency in Hz
+ */
 uint16_t getIRcarrierFrequency()
 {
     uint16_t RetVal = frequency;
@@ -277,6 +237,10 @@ uint16_t getIRcarrierFrequency()
     return RetVal;
 }
 
+/**
+ * Report if a button has been captures and is ready to be stored
+ * @return True it a button is ready, false if not
+ */
 bool IRbuttonReady()
 {
     bool RetVal = buttonCaptured;
@@ -287,6 +251,51 @@ bool IRbuttonReady()
     }
 
     return RetVal;
+}
+
+/**
+ * Start the input capture timer interrupt to learn IR codes
+ */
+static void IRstartSignalCapture()
+{
+    Capture_start(captureHandle);
+}
+
+/**
+ * Stops the input capture timer and closes the capture driver instance so
+ * the callback function for the timer interrupt can be reassigned
+ */
+static void IRstopSignalCapture()
+{
+    Capture_stop(captureHandle);
+}
+
+/**
+ * Initialize the input capture timer (should only be called once)
+ */
+static void IRinitSignalCapture()
+{
+    // Set up input capture clock on pin 50 [subject to change]
+    Capture_init();
+    // Set up capture timer parameters
+    Capture_Params_init(&captureParams);
+    captureParams.mode  = Capture_ANY_EDGE;
+    captureParams.callbackFxn = IRedgeProgramButton;
+    captureParams.periodUnit = Capture_PERIOD_COUNTS;
+    captureHandle = Capture_open(Board_CAPTURE0, &captureParams);
+    // Make sure this capture timer is not running yet
+    Capture_stop(captureHandle);
+}
+
+/**
+ * Initialize the edge detect GPIO interrupt passthrough (should only be called once)
+ */
+static void IRinitEdgeDetectGPIO()
+{
+    GPIO_setConfig(Board_IR_EDGE_DETECT_PIN, GPIO_CFG_IN_NOPULL | GPIO_CFG_IN_INT_BOTH_EDGES);
+    GPIO_setCallback(Board_IR_EDGE_DETECT_PIN, IRedgeDetectionPassthrough);
+    // Force the interrupt to be disabled until IRstartEdgeDetectGPIO is called
+    GPIO_disableInt(Board_IR_EDGE_DETECT_PIN);
 }
 
 /**

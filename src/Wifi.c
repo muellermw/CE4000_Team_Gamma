@@ -2,11 +2,13 @@
  * This file utilizes TI and other custom firmware to implement WiFi provisioning
  * and general WiFi event control flow. wifi_init is called by the main program at
  * startup, and does not return until the board has connected to an AP.
- * @file wifi.c
+ * @file Wifi.c
  * @date 3/10/2019
  * @author: Marcus Mueller
  */
 
+#include <stdio.h>
+#include <string.h>
 // Driver Header files
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
@@ -14,11 +16,13 @@
 #include <ti/devices/cc32xx/driverlib/prcm.h>
 #include <ti/drivers/power/PowerCC32XX.h>
 #include <ti/drivers/net/wifi/simplelink.h>
-#include <stdio.h>
+#include "Wifi.h"
 #include "Board.h"
-#include "wifi.h"
-#include "uart_term.h"
 #include "Misc_Timer.h"
+
+#ifdef DEBUG_SESSION
+#include "uart_term.h"
+#endif
 
 static int initSlDevice = 1;
 static int wlanConnectToRouter = 1;
@@ -34,7 +38,6 @@ static uint8_t timeoutMax = 20;
 
 static void wifiStartWLANProvisioning();
 static int32_t wifiProvisioning();
-static int32_t InitSimplelink(uint8_t const role);
 static void resetBoard();
 static void WiFiProvisionTimeoutHandler(Timer_Handle handle);
 
@@ -46,7 +49,12 @@ void wifi_init()
     GPIO_init();
     SPI_init();
 
-    initSlDevice = 1;
+    // The NWP has not been initialized yet, do it now
+    if (initSlDevice)
+    {
+        simplelink_init(0);
+    }
+
     wlanConnectToRouter = 1;
     wlanNeedUserProvision = 0;
 
@@ -74,13 +82,8 @@ void wifiStartWLANProvisioning()
         //event handlers.
         sl_Task(NULL);
 
-        if (initSlDevice)
-        {
-            InitSimplelink(0);
-        }
-
         // If the WiFi subsystem determines that the board needs to be user provisioned, it is started here
-        if (wlanNeedUserProvision && !initSlDevice)
+        if (wlanNeedUserProvision)
         {
             wifiProvisioning();
         }
@@ -96,44 +99,56 @@ void wifiStartWLANProvisioning()
  * @param role - the role to set the SimpleLink chip (typically 0 for host station)
  * @return status - 0 for OK, negative value for error
  */
-static int32_t InitSimplelink(uint8_t const role)
+int32_t simplelink_init(uint8_t const role)
 {
     int32_t retVal = -1;
 
     if((retVal = sl_Start(0, 0, 0)) == SL_ERROR_RESTORE_IMAGE_COMPLETE)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("sl_Start Failed\r\n");
         UART_PRINT(
             "\r\n**********************************\r\n"
             "Return to Factory Default been Completed\r\nPlease RESET the Board\r\n"
             "**********************************\r\n");
+#endif
         while(1){}
     }
 
     if(SL_RET_CODE_PROVISIONING_IN_PROGRESS == retVal)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT(" [ERROR] Provisioning is already running, stopping current session...\r\n");
+#endif
         retVal = sl_WlanProvisioning(SL_WLAN_PROVISIONING_CMD_STOP, 0, 0, NULL, 0);
         retVal = sl_Start(0, 0, 0);
     }
 
     if(retVal == role)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("SimpleLinkInitCallback: started in role %d\r\n", retVal);
+#endif
     }
     else
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("SimpleLinkInitCallback: started in role %d, set the requested role %d\r\n", retVal, role);
+#endif
         retVal = sl_WlanSetMode(role);
         retVal = sl_Stop(NWP_STOP_TIMEOUT);
         retVal = sl_Start(0, 0, 0);
 
         if(retVal != role)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("SimpleLinkInitCallback: error setting role %d, status=%d\r\n", role, retVal);
+#endif
         }
 
+#ifdef DEBUG_SESSION
         UART_PRINT("SimpleLinkInitCallback: restarted in role %d\r\n", role);
+#endif
     }
 
     initSlDevice = 0;
@@ -156,9 +171,11 @@ int32_t wifiProvisioning()
     uint16_t macAddressLen;
     uint8_t provisioningCmd;
 
+#ifdef DEBUG_SESSION
     UART_PRINT("\n\r\n\r\n\r==================================\n\r");
     UART_PRINT(" Provisioning WLAN \n\r");
     UART_PRINT("==================================\n\r");
+#endif
 
     /* Get device's info */
     configOpt = SL_DEVICE_GENERAL_VERSION;
@@ -167,15 +184,16 @@ int32_t wifiProvisioning()
 
     if(SL_RET_CODE_PROVISIONING_IN_PROGRESS == retVal)
     {
-        UART_PRINT(
-            " [ERROR] Provisioning is already running,"
-            " stopping current session...\r\n");
+#ifdef DEBUG_SESSION
+        UART_PRINT(" [ERROR] Provisioning is already running, stopping current session...\r\n");
+#endif
         return(0);
     }
 
+#ifdef DEBUG_SESSION
     UART_PRINT(
         "\r\n CHIP 0x%x\r\n MAC  31.%d.%d.%d.%d\r\n PHY  %d.%d.%d.%d\r\n "
-"NWP%d.%d.%d.%d\r\n ROM  %d\r\n HOST %d.%d.%d.%d\r\n",
+        "NWP%d.%d.%d.%d\r\n ROM  %d\r\n HOST %d.%d.%d.%d\r\n",
         ver.ChipId,
         ver.FwVersion[0],
         ver.FwVersion[1],
@@ -192,6 +210,7 @@ int32_t wifiProvisioning()
         ver.RomVersion,
         SL_MAJOR_VERSION_NUM,SL_MINOR_VERSION_NUM,SL_VERSION_NUM,
         SL_SUB_VERSION_NUM);
+#endif
 
     macAddressLen = sizeof(simpleLinkMac);
     sl_NetCfgGet(SL_NETCFG_MAC_ADDRESS_GET, NULL, &macAddressLen, (unsigned char *)simpleLinkMac);
@@ -200,42 +219,73 @@ int32_t wifiProvisioning()
     /**************************************************************************
      * CODE TO CHANGE THE ACCESS POINT SSID
      *************************************************************************/
+    uint16_t devNameLen = DEVICE_NAME_LENGTH;
+    char deviceName[devNameLen];
+    memset(deviceName, 0, devNameLen);
+
+    uint16_t devNameOpt = SL_WLAN_P2P_OPT_DEV_NAME;
+    sl_WlanGet(SL_WLAN_CFG_P2P_PARAM_ID, &devNameOpt , &devNameLen, (uint8_t*)deviceName);
+
+#ifdef DEBUG_SESSION
+    UART_PRINT("\r\nDevice Name: %s\r\n", deviceName);
+#endif
+
+    char ncirSSID[DEVICE_SSID_LENGTH];
+
 #ifdef USE_NCIR_SSID
-    int newSsidSize = sizeof("NCIR-XXXXXX");
-    char ncirSSID[newSsidSize];
-    snprintf(ncirSSID, newSsidSize, "NCIR-%x%x%x", simpleLinkMac[3],
-                                                   simpleLinkMac[4],
-                                                   simpleLinkMac[5]);
+    // The device name has not been set yet - default is "mysimplelink"
+    if (strcmp(deviceName, (char *)DEFAULT_DEVICE_NAME) == 0)
+    {
+        snprintf(ncirSSID, DEVICE_SSID_LENGTH, "NCIR-%x%x%x", simpleLinkMac[3],
+                                                              simpleLinkMac[4],
+                                                              simpleLinkMac[5]);
+    }
+    // The new SSID format is NCIR-"device_name"
+    else
+    {
+        snprintf(ncirSSID, DEVICE_SSID_LENGTH, "NCIR-%s", deviceName);
+    }
 #else
-    int newSsidSize = sizeof("mysimplelink-XXXXXX");
-    char ncirSSID[newSsidSize];
-    snprintf(ncirSSID, newSsidSize, "mysimplelink-%x%x%x", simpleLinkMac[3],
-                                                           simpleLinkMac[4],
-                                                           simpleLinkMac[5]);
+    // The device name has not been set yet - default is "mysimplelink"
+    if (strcmp(deviceName, (char *)DEFAULT_DEVICE_NAME) == 0)
+    {
+        snprintf(ncirSSID, DEVICE_SSID_LENGTH, "mysimplelink-%x%x%x", simpleLinkMac[3],
+                                                                      simpleLinkMac[4],
+                                                                      simpleLinkMac[5]);
+    }
+    // The new SSID format is mysimplelink-"device_name"
+    else
+    {
+        snprintf(ncirSSID, DEVICE_SSID_LENGTH, "mysimplelink-%s", deviceName);
+    }
 #endif
 
     sl_WlanSet(SL_WLAN_CFG_AP_ID, SL_WLAN_AP_OPT_SSID, strlen(ncirSSID), (const unsigned char*)ncirSSID);
 
-    UART_PRINT(" MAC address: %x:%x:%x:%x:%x:%x\r\n\r\n",
+#ifdef DEBUG_SESSION
+    UART_PRINT("MAC address: %x:%x:%x:%x:%x:%x\r\n\r\n",
                simpleLinkMac[0],
                simpleLinkMac[1],
                simpleLinkMac[2],
                simpleLinkMac[3],
                simpleLinkMac[4],
                simpleLinkMac[5]);
+#endif
 
     provisioningCmd = SL_WLAN_PROVISIONING_CMD_START_MODE_APSC;
 
     if(provisioningCmd <= SL_WLAN_PROVISIONING_CMD_START_MODE_APSC_EXTERNAL_CONFIGURATION)
     {
-        UART_PRINT(
-            "\r\n Starting Provisioning! mode=%d (0-AP, 1-SC, 2-AP+SC, "
-            "3-AP+SC+WAC)\r\n\r\n",
-            provisioningCmd);
+#ifdef DEBUG_SESSION
+        UART_PRINT("\r\n Starting Provisioning! mode=%d (0-AP, 1-SC, 2-AP+SC, "
+                   "3-AP+SC+WAC)\r\n\r\n", provisioningCmd);
+#endif
     }
     else
     {
-        UART_PRINT("\r\n Provisioning Command = %d \r\n\r\n",provisioningCmd);
+#ifdef DEBUG_SESSION
+        UART_PRINT("\r\n Provisioning Command = %d \r\n\r\n", provisioningCmd);
+#endif
     }
 
     // start provisioning
@@ -243,7 +293,9 @@ int32_t wifiProvisioning()
 
     if(retVal < 0)
     {
+#ifdef DEBUG_SESSION
         UART_PRINT(" Provisioning Command Error, num:%d\r\n",retVal);
+#endif
     }
 
     wlanNeedUserProvision = 0;
@@ -280,12 +332,16 @@ static void WiFiProvisionTimeoutHandler(Timer_Handle handle)
     if (timeoutCount < timeoutMax)
     {
         timeoutCount++;
+#ifdef DEBUG_SESSION
         UART_PRINT("Provisioning timeouts left: %d\r\n", timeoutMax - timeoutCount);
+#endif
         startMiscOneShotTimer();
     }
     else
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("Restarting Board!!\r\n");
+#endif
         timeoutCount = 0;
 
         // Full timeout - reset the board
@@ -320,6 +376,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
     {
     case SL_WLAN_EVENT_CONNECT:
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("STA connected to AP %s, ",
                    pWlanEvent->Data.Connect.SsidName);
 
@@ -330,6 +387,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
                    pWlanEvent->Data.Connect.Bssid[3],
                    pWlanEvent->Data.Connect.Bssid[4],
                    pWlanEvent->Data.Connect.Bssid[5]);
+#endif
     }
     break;
 
@@ -343,22 +401,29 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
          */
         if(SL_WLAN_DISCONNECT_USER_INITIATED == pDiscntEvtData->ReasonCode)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("Device disconnected from the AP on request\r\n");
+#endif
         }
         else
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("Device disconnected from the AP on an ERROR\r\n");
+#endif
         }
     }
     break;
 
     case SL_WLAN_EVENT_PROVISIONING_PROFILE_ADDED:
-        UART_PRINT(" [Provisioning] Profile Added: SSID: %s\r\n",
-                   pWlanEvent->Data.ProvisioningProfileAdded.Ssid);
+#ifdef DEBUG_SESSION
+        UART_PRINT(" [Provisioning] Profile Added: SSID: %s\r\n", pWlanEvent->Data.ProvisioningProfileAdded.Ssid);
+#endif
         if(pWlanEvent->Data.ProvisioningProfileAdded.ReservedLen > 0)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Profile Added: PrivateToken:%s\r\n",
                        pWlanEvent->Data.ProvisioningProfileAdded.Reserved);
+#endif
         }
 
         // Stop the provisioning timeout timer
@@ -376,41 +441,48 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
         case SL_WLAN_PROVISIONING_ERROR_ABORT_HTTP_SERVER_DISABLED:
         case SL_WLAN_PROVISIONING_ERROR_ABORT_PROFILE_LIST_FULL:
         case SL_WLAN_PROVISIONING_ERROR_ABORT_PROVISIONING_ALREADY_STARTED:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Provisioning Error status=%d\r\n",
                        pWlanEvent->Data.ProvisioningStatus.ProvisioningStatus);
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_FAIL_NETWORK_NOT_FOUND:
-            UART_PRINT(
-                " [Provisioning] Profile confirmation failed: network"
-                "not found\r\n");
+#ifdef DEBUG_SESSION
+            UART_PRINT(" [Provisioning] Profile confirmation failed: network not found\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_FAIL_CONNECTION_FAILED:
-            UART_PRINT(
-                " [Provisioning] Profile confirmation failed: Connection "
-                "failed\r\n");
+#ifdef DEBUG_SESSION
+            UART_PRINT(" [Provisioning] Profile confirmation failed: Connection failed\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_CONNECTION_SUCCESS_IP_NOT_ACQUIRED:
-            UART_PRINT(
-                " [Provisioning] Profile confirmation failed: IP address not "
-                "acquired\r\n");
+#ifdef DEBUG_SESSION
+            UART_PRINT(" [Provisioning] Profile confirmation failed: IP address not acquired\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_SUCCESS_FEEDBACK_FAILED:
-            UART_PRINT(
-                " [Provisioning] Profile Confirmation failed (Connection "
-                "Success, feedback to Smartphone app failed)\r\n");
+#ifdef DEBUG_SESSION
+            UART_PRINT(" [Provisioning] Profile Confirmation failed"
+                       "(Connection Success, feedback to Smartphone app failed)\r\n");
+#endif
             resetBoard();
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_STATUS_SUCCESS:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Profile Confirmation Success!\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_AUTO_STARTED:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Auto-Provisioning Started\r\n");
+#endif
 
             // Auto-provisioning has been started outside of the WiFi initialization loop. This means the
             // board has been disconnected for a long period of time. If this happens, reset the board
@@ -437,14 +509,16 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             break;
 
         case SL_WLAN_PROVISIONING_STOPPED:
+#ifdef DEBUG_SESSION
             UART_PRINT("\r\n Provisioning stopped:");
+#endif
             if(ROLE_STA == pWlanEvent->Data.ProvisioningStatus.Role)
             {
                 if(SL_WLAN_STATUS_CONNECTED == pWlanEvent->Data.ProvisioningStatus.WlanStatus)
                 {
-                    UART_PRINT(
-                        "Connected to SSID: %s\r\n",
-                        pWlanEvent->Data.ProvisioningStatus.Ssid);
+#ifdef DEBUG_SESSION
+                    UART_PRINT("Connected to SSID: %s\r\n", pWlanEvent->Data.ProvisioningStatus.Ssid);
+#endif
 
                     // Stop the provisioning timeout timer
                     stopMiscOneShotTimer();
@@ -457,29 +531,40 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             break;
 
         case SL_WLAN_PROVISIONING_SMART_CONFIG_SYNCED:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Smart Config Synced!\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_SMART_CONFIG_SYNC_TIMEOUT:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Smart Config Sync Timeout!\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_WLAN_CONNECT:
-            UART_PRINT(
-                " [Provisioning] Profile confirmation: WLAN Connected!\r\n");
+#ifdef DEBUG_SESSION
+            UART_PRINT(" [Provisioning] Profile confirmation: WLAN Connected!\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_CONFIRMATION_IP_ACQUIRED:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Profile confirmation: IP Acquired!\r\n");
+#endif
             break;
 
         case SL_WLAN_PROVISIONING_EXTERNAL_CONFIGURATION_READY:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] External configuration is ready! \r\n");
+#endif
             break;
 
         default:
+#ifdef DEBUG_SESSION
             UART_PRINT(" [Provisioning] Unknown Provisioning Status: %d\r\n",
                        pWlanEvent->Data.ProvisioningStatus.ProvisioningStatus);
+#endif
             break;
         }
     }
@@ -487,7 +572,9 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 
     default:
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("Unexpected WLAN event with Id [0x%x]\r\n", pWlanEvent->Id);
+#endif
     }
     break;
     }
@@ -501,20 +588,22 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
  */
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 {
-    SlNetAppEventData_u *pNetAppEventData = NULL;
-
     if(NULL == pNetAppEvent)
     {
         return;
     }
 
+#ifdef DEBUG_SESSION
+    SlNetAppEventData_u *pNetAppEventData = NULL;
     pNetAppEventData = &pNetAppEvent->Data;
+#endif
 
     switch(pNetAppEvent->Id)
     {
     case SL_NETAPP_EVENT_IPV6_ACQUIRED:
     case SL_NETAPP_EVENT_IPV4_ACQUIRED:
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("IPv4 acquired: IP = %d.%d.%d.%d\r\n", \
                    (uint8_t)SL_IPV4_BYTE(pNetAppEventData->IpAcquiredV4.Ip,3), \
                    (uint8_t)SL_IPV4_BYTE(pNetAppEventData->IpAcquiredV4.Ip,2), \
@@ -529,6 +618,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
                                          1), \
                    (uint8_t)SL_IPV4_BYTE(pNetAppEventData->IpAcquiredV4.Gateway,
                                          0));
+#endif
         // Stop the provisioning timeout timer
         stopMiscOneShotTimer();
 
@@ -541,15 +631,17 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
     case SL_NETAPP_EVENT_IPV4_LOST:
     case SL_NETAPP_EVENT_DHCP_IPV4_ACQUIRE_TIMEOUT:
     {
-        UART_PRINT("IPv4 lost Id or timeout, Id [0x%x]!!!\r\n",
-                   pNetAppEvent->Id);
+#ifdef DEBUG_SESSION
+        UART_PRINT("IPv4 lost Id or timeout, Id [0x%x]!!!\r\n", pNetAppEvent->Id);
+#endif
     }
     break;
 
     default:
     {
-        UART_PRINT("Unexpected NetApp event with Id [0x%x] \r\n",
-                   pNetAppEvent->Id);
+#ifdef DEBUG_SESSION
+        UART_PRINT("Unexpected NetApp event with Id [0x%x] \r\n", pNetAppEvent->Id);
+#endif
     }
     break;
     }
@@ -566,20 +658,28 @@ void SimpleLinkInitCallback(uint32_t status, SlDeviceInitInfo_t *DeviceInitInfo)
     switch(status)
     {
     case 0:
+#ifdef DEBUG_SESSION
         UART_PRINT("Device started in Station role\r\n");
+#endif
         break;
 
     case 1:
+#ifdef DEBUG_SESSION
         UART_PRINT("Device started in P2P role\r\n");
+#endif
         break;
 
     case 2:
+#ifdef DEBUG_SESSION
         UART_PRINT("Device started in AP role\r\n");
+#endif
         break;
     }
 
+#ifdef DEBUG_SESSION
     UART_PRINT("Device Chip ID:   0x%08X\r\n", DeviceInitInfo->ChipId);
     UART_PRINT("Device More Data: 0x%08X\r\n", DeviceInitInfo->MoreData);
+#endif
 }
 
 /**

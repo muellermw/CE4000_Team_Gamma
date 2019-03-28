@@ -1,8 +1,10 @@
-/*
+/**
  * Signal_Interval.h
  *
- *  Created on: Dec 11, 2018
- *      Author: Max Kallenberger
+ * Represents an IR signal pulse in microseconds
+ *
+ * Created on: Dec 11, 2018
+ *     Author: Max Kallenberger
  */
 
 #ifndef INC_SIGNAL_INTERVAL_H_
@@ -13,6 +15,6 @@
 typedef struct {
     uint32_t time_us;
     bool PWM;
-}SignalInterval;
+} SignalInterval;
 
 #endif /* INC_SIGNAL_INTERVAL_H_ */

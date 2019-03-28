@@ -1,6 +1,6 @@
 /**
  * This is a small API file that focuses on providing button operations such as adding/removing
- * @file button.h
+ * @file Button.h
  * @date 1/14/2019
  * @author: Marcus Mueller
  */
@@ -8,7 +8,7 @@
 #ifndef INC_BUTTON_H_
 #define INC_BUTTON_H_
 
-#include "filesystem.h"
+#include "Filesystem.h"
 
 #define BUTTON_TABLE_FILE "table_of_buttons"
 #define BUTTON_FILE_STRING "Button%d"
@@ -33,11 +33,8 @@ int deleteButtonTableEntry(_u16 buttonIndex);
 int findNumButtonEntries(ButtonTableEntry* entryList, _u32 fileSize);
 int getButtonCarrierFrequency(_u16 buttonIndex);
 void getButtonName(_u16 buttonIndex, char* nameBuffer);
-void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 ButtonTableEntry* retrieveButtonTableContents(const unsigned char* fileName, _u32 fileSize);
 SignalInterval* getButtonSignalInterval(_u16 buttonIndex);
 void deleteAllButtons();
-
-void printButtonTable(); //MOVE TO WIFI WHEN READY
 
 #endif /* INC_BUTTON_H_ */

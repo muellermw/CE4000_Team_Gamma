@@ -18,13 +18,6 @@
 #define MAX_SEQUENCE_INDEX 128 // 7250
 
 void IR_Init_Emitter();
-void IRsetPWMperiod(uint32_t period);
-void IRstartOneShotTimer();
-void IRsetOneShotTimeout(uint32_t time_in_us);
 void IRemitterSendButton(SignalInterval* button, uint16_t frequency);
-bool IRbuttonReady();
-bool IRbuttonSending();
-void IRstartEdgeDetectGPIO();
-void IRstopEdgeDetectGPIO();
 
 #endif /* INC_IR_EMITTER_H_ */

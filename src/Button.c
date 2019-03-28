@@ -1,6 +1,6 @@
 /**
  * This is a small API file that focuses on providing button operations such as adding/removing
- * @file button.c
+ * @file Button.c
  * @date 1/14/2019
  * @author: Marcus Mueller
  */
@@ -9,8 +9,8 @@
 #include <ti/drivers/net/wifi/simplelink.h>
 // Board Header file
 #include "Board.h"
-#include "filesystem.h"
-#include "button.h"
+#include "Button.h"
+#include "Filesystem.h"
 
 #ifdef DEBUG_SESSION
 #include "uart_term.h"
@@ -18,10 +18,11 @@
 
 
 static void initializeButtonTable();
+static void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize);
 static bool checkIdenticalButtonEntries(const unsigned char* newButtonName, ButtonTableEntry* buttonTableList, _u16 numButtonEntries);
 
 /**
- *
+ * Initialize the file system button table
  */
 void button_init()
 {
@@ -538,25 +539,11 @@ static void initializeButtonTable()
  * @param newButton the button table entry to initialize
  * @param buttonNameMaxSize The maximum size of the button name string
  */
-void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize)
+static void initNewButtonEntry(ButtonTableEntry* newButton, _u16 buttonNameMaxSize)
 {
     memset(newButton->buttonName, NULL, buttonNameMaxSize);
     newButton->irCarrierFrequency = 0;
     newButton->buttonIndex = 0;
-}
-
-void printButtonTable(){
-    // Get the size of the file so we know how many entries we need to go through
-    int fileSize = fsGetFileSizeInBytes(BUTTON_TABLE_FILE);
-    int buttonEntries = fileSize/sizeof(ButtonTableEntry);
-    ButtonTableEntry* btnTblList = retrieveButtonTableContents(BUTTON_TABLE_FILE, fileSize);
-
-    for (int i = 0; i < buttonEntries; i++)
-    {
-#ifdef DEBUG_SESSION
-        UART_PRINT("\nName: %s\r\nIndex: %d\r\nFrequency: %d\r\n\n", btnTblList[i].buttonName, btnTblList[i].buttonIndex, btnTblList[i].irCarrierFrequency);
-#endif
-    }
 }
 
 /**

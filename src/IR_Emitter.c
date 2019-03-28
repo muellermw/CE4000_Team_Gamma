@@ -1,9 +1,12 @@
 /**
  * IR_Emitter.c
  *
+ * This is the control mechanism for repeating IR commands
+ *
  * Emitter LED is on GPIO 9 (PIN 64) (which is where the PWM timer sends its signal)
  */
 
+#include <stdlib.h>
 // GPIO Driver files
 #include <ti/drivers/GPIO.h>
 // PWM Driver files
@@ -13,13 +16,6 @@
 // Board Header file
 #include "Board.h"
 #include "IR_Emitter.h"
-#include <stdlib.h>
-
-void IRinitPWMtimer();
-void IRstartPWMtimer();
-void IRstopPWMtimer();
-void IRinitOneShotTimer();
-void IRoneShotTimerHandler(Timer_Handle handle);
 
 static PWM_Handle pwmHandle;
 static PWM_Params pwmParams;
@@ -27,8 +23,16 @@ static Timer_Handle oneShotHandle;
 static Timer_Params oneShotParams;
 static SignalInterval* currentOutputSequence = 0;
 static uint16_t currentOutputIndex = 0;
-static bool sendingButton = false;
 
+static void IRsetPWMperiod(uint32_t period);
+static void IRinitOneShotTimer();
+static void IRstartOneShotTimer();
+static void IRinitPWMtimer();
+static void IRstartPWMtimer();
+static void IRstopPWMtimer();
+static void IRsetOneShotTimeout(uint32_t time_in_us);
+
+void IRoneShotTimerHandler(Timer_Handle handle);
 
 /**
  * Initialize PWM and one-shot timers to recreate stored IR signals
@@ -41,38 +45,26 @@ void IR_Init_Emitter()
     IR_LED_OFF();
 }
 
-void IRinitPWMtimer()
+/**
+ * Start the send sequence needed to output a valid IR
+ * command using a PWM output and a one-shot timer
+ * @param button The SignalInterval that represents the IR signal to send
+ * @param frequency The carrier frequency of the IR signal to send
+ */
+void IRemitterSendButton(SignalInterval* button, uint16_t frequency)
 {
-    uint32_t   dutyValue;
-    // Initialize the PWM driver.
-    PWM_init();
-    // Initialize the PWM parameters
-    PWM_Params_init(&pwmParams);
-    pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
-    pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
-    pwmParams.periodValue = 38000;           // Default to 38kHz (typical consumer IR frequency)
-    pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
-    pwmParams.dutyValue = 0;                 // 0% initial duty cycle
-    // Open the PWM instance
-    pwmHandle = PWM_open(Board_PWM0, &pwmParams);
-
-    dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 50) / 100);
-    PWM_setDuty(pwmHandle, dutyValue);  // set duty cycle to 50%
-}
-
-void IRinitOneShotTimer()
-{
-    Timer_init();
-
-    Timer_Params_init(&oneShotParams);
-    oneShotParams.periodUnits = Timer_PERIOD_US;
-    oneShotParams.timerMode  = Timer_ONESHOT_CALLBACK;
-    oneShotParams.timerCallback = IRoneShotTimerHandler;
+    currentOutputIndex = 0;
+    currentOutputSequence = button;
+    IRsetPWMperiod((uint32_t)frequency);
+    // set a default timeout to start the IR sequence outside of any interrupt
+    IRsetOneShotTimeout(50);
+    IRstartOneShotTimer();
 }
 
 /**
  *  ======== IRoneShotTimerHandler ========
  *  Callback function for the one-shot timer signal sending interrupt
+ *  Loops through and IR timing sequence to output an IR signal through the IR emitter
  */
 void IRoneShotTimerHandler(Timer_Handle handle)
 {
@@ -100,53 +92,88 @@ void IRoneShotTimerHandler(Timer_Handle handle)
     else
     {
         IRstopPWMtimer();
-        sendingButton = false;
 
         // Need to free the output sequence
         free(currentOutputSequence);
     }
 }
 
-void IRstartPWMtimer()
+/**
+ * Sets up the PWM output for IR output - 50% duty cycle
+ */
+static void IRinitPWMtimer()
+{
+    uint32_t   dutyValue;
+    // Initialize the PWM driver.
+    PWM_init();
+    // Initialize the PWM parameters
+    PWM_Params_init(&pwmParams);
+    pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
+    pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
+    pwmParams.periodValue = 38000;           // Default to 38kHz (typical consumer IR frequency)
+    pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
+    pwmParams.dutyValue = 0;                 // 0% initial duty cycle
+    // Open the PWM instance
+    pwmHandle = PWM_open(Board_PWM_IR_OUTPUT, &pwmParams);
+
+    dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 50) / 100);
+    PWM_setDuty(pwmHandle, dutyValue);  // set duty cycle to 50%
+}
+
+/**
+ * Sets up the one-shot timer to loop through the timings of the IR signal
+ */
+static void IRinitOneShotTimer()
+{
+    Timer_init();
+
+    Timer_Params_init(&oneShotParams);
+    oneShotParams.periodUnits = Timer_PERIOD_US;
+    oneShotParams.timerMode  = Timer_ONESHOT_CALLBACK;
+    oneShotParams.timerCallback = IRoneShotTimerHandler;
+}
+
+/**
+ * Starts the PWM timer output
+ */
+static void IRstartPWMtimer()
 {
     PWM_start(pwmHandle);
 }
 
-void IRstopPWMtimer()
+/**
+ * Stops the PWM timer output
+ */
+static void IRstopPWMtimer()
 {
     PWM_stop(pwmHandle);
 }
 
-void IRsetPWMperiod(uint32_t period)
+/**
+ * Sets the period (IR carrier frequency) of the PWM output
+ * @param period The period to set the PWM output to
+ */
+static void IRsetPWMperiod(uint32_t period)
 {
     PWM_setPeriod(pwmHandle, period);
     uint32_t dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 50) / 100);
     PWM_setDuty(pwmHandle, dutyValue);  // set duty cycle to 50%
 }
 
-void IRsetOneShotTimeout(uint32_t time_in_us)
-{
-    oneShotParams.period = time_in_us;
-    oneShotHandle = Timer_open(Board_TIMER0, &oneShotParams);
-}
-
-void IRstartOneShotTimer()
+/**
+ * Starts the one-shot timer
+ */
+static void IRstartOneShotTimer()
 {
     Timer_start(oneShotHandle);
 }
 
-void IRemitterSendButton(SignalInterval* button, uint16_t frequency)
+/**
+ * Sets the one-shot timer timeout
+ * @param time_in_us The timeout in microseconds
+ */
+static void IRsetOneShotTimeout(uint32_t time_in_us)
 {
-    sendingButton = true;
-    currentOutputIndex = 0;
-    currentOutputSequence = button;
-    IRsetPWMperiod((uint32_t)frequency);
-    // set a default timeout to start the IR sequence outside of any interrupt
-    IRsetOneShotTimeout(50);
-    IRstartOneShotTimer();
-}
-
-bool IRbuttonSending()
-{
-    return sendingButton;
+    oneShotParams.period = time_in_us;
+    oneShotHandle = Timer_open(Board_EMITTER_TIMER, &oneShotParams);
 }

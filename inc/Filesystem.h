@@ -1,7 +1,7 @@
 /**
  * This is an API wrapper for the TI proprietary file system that is used with their non-volatile storage solution.
  * This API will be used to store IR button data that will be retrieved by the user or restored on power cycle.
- * @file filesystem.h
+ * @file Filesystem.h
  * @date 1/3/2019
  * @author Marcus Mueller
  */
@@ -21,6 +21,7 @@ typedef enum
 } flashOperation;
 
 void filesystem_init();
+void fsPrintInfo();
 int fsGetFileSizeInBytes(const unsigned char* fileName);
 int fsCreateFile(const unsigned char* fileName, _u32 maxFileSize);
 int fsOpenFile(const unsigned char* fileName, flashOperation fileOp);

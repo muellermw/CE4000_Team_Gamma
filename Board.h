@@ -68,7 +68,7 @@ extern "C" {
 
 #define Board_I2S0                   CC3220SF_LAUNCHXL_I2S0
 
-#define Board_PWM0                   CC3220SF_LAUNCHXL_PWM0
+#define Board_PWM_IR_OUTPUT          CC3220SF_LAUNCHXL_PWM_IR_OUTPUT
 
 #define Board_SD0                    CC3220SF_LAUNCHXL_SD0
 
@@ -81,7 +81,7 @@ extern "C" {
 #define Board_SPI_MASTER_READY       CC3220SF_LAUNCHXL_SPI_MASTER_READY
 #define Board_SPI_SLAVE_READY        CC3220SF_LAUNCHXL_SPI_SLAVE_READY
 
-#define Board_TIMER0                 CC3220SF_LAUNCHXL_TIMER0
+#define Board_EMITTER_TIMER          CC3220SF_LAUNCHXL_TIMER0
 #define Board_MISC_TIMER             CC3220SF_LAUNCHXL_TIMER1
 
 #define Board_UART0                  CC3220SF_LAUNCHXL_UART0

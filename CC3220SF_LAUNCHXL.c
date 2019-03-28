@@ -216,10 +216,6 @@ void CC3220SF_LAUNCHXL_initGeneral(void)
  */
 GPIO_PinConfig gpioPinConfigs[] = {
     /* input pins with callbacks */
-    /* CC3220SF_LAUNCHXL_GPIO_SW2 INTERRUPT */
-    GPIOCC32XX_GPIO_13 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_RISING,
-    /* CC3220SF_LAUNCHXL_GPIO_SW3 INTERRUPT */
-    GPIOCC32XX_GPIO_22 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_RISING,
     /* CC3220SF_LAUNCHXL_GPIO_IR_EDGE_DETECT INTERRUPT */
     GPIOCC32XX_GPIO_14 | GPIO_CFG_INPUT | GPIO_CFG_IN_INT_BOTH_EDGES,
 
@@ -238,8 +234,6 @@ GPIO_PinConfig gpioPinConfigs[] = {
  *       reduce memory usage (if placed at end of gpioPinConfigs array).
  */
 GPIO_CallbackFxn gpioCallbackFunctions[] = {
-    NULL,  /* CC3220SF_LAUNCHXL_GPIO_SW2 */
-    NULL,  /* CC3220SF_LAUNCHXL_GPIO_SW3 */
     NULL   /* CC3220SF_LAUNCHXL_GPIO_IR_EDGE_DETECT */
 };
 
@@ -458,7 +452,7 @@ const PowerCC32XX_ConfigV1 PowerCC32XX_config = {
 PWMTimerCC32XX_Object pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWMCOUNT];
 
 const PWMTimerCC32XX_HWAttrsV2 pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWMCOUNT] = {
-    {    /* CC3220SF_LAUNCHXL_PWM0 Timer2B */
+    {    /* CC3220SF_LAUNCHXL_PWM_IR_OUTPUT Timer2B (GPIO 9 for IR LED output)*/
         .pwmPin = PWMTimerCC32XX_PIN_64
     }
 };
@@ -466,8 +460,8 @@ const PWMTimerCC32XX_HWAttrsV2 pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWMCOUNT
 const PWM_Config PWM_config[CC3220SF_LAUNCHXL_PWMCOUNT] = {
     {
         .fxnTablePtr = &PWMTimerCC32XX_fxnTable,
-        .object = &pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWM0],
-        .hwAttrs = &pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWM0]
+        .object = &pwmTimerCC3220SObjects[CC3220SF_LAUNCHXL_PWM_IR_OUTPUT],
+        .hwAttrs = &pwmTimerCC3220SHWAttrs[CC3220SF_LAUNCHXL_PWM_IR_OUTPUT]
     }
 };
 

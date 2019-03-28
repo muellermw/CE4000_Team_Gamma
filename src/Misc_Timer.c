@@ -6,9 +6,9 @@
  * @author: Marcus Mueller
  */
 
+#include <stddef.h>
 // Board Header file
 #include "Board.h"
-#include <stddef.h>
 #include "Misc_Timer.h"
 
 static Timer_Handle oneShotHandle;

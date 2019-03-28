@@ -33,6 +33,7 @@
 
 /*
  *  ======== main_nortos.c ========
+ *  This file represents the main logic control for the NCIR project
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -47,11 +48,11 @@
 #include <ti/drivers/NVS.h>
 // Board Header file
 #include "Board.h"
+#include "Filesystem.h"
+#include "Wifi.h"
+#include "Button.h"
 #include "IR_Emitter.h"
 #include "IR_Receiver.h"
-#include "wifi.h"
-#include "filesystem.h"
-#include "button.h"
 #include "Control_States.h"
 
 #ifdef DEBUG_SESSION
@@ -78,17 +79,11 @@
 int compareButtonNames(char* suppliedName, uint8_t buttonIndex);
 char* createButtonRefreshBuffer();
 void toLower(char* string);
-void gpioButtonFxnSW2(uint_least8_t index);
-void gpioButtonFxnSW3(uint_least8_t index);
 
 #ifdef DEBUG_SESSION
 void fileSystemTestCode();
 void pairingLEDTestBlink();
 #endif
-
-bool emitterReady = false;
-bool mainSendButton = false;
-bool mainDeleteButton = false;
 
 
 /*
@@ -110,23 +105,17 @@ int main(void)
     // Enable the file system NVS driver
     filesystem_init();
 
+    // Start the Network Processor for WiFi
+    wifi_init();
+
     // Start the button subsystem that utilizes the file system
     button_init();
 
-    // Call driver init functions
+    // If we are in debug mode, this will print the current file system arrangement to the console
+    fsPrintInfo();
+
+    // Call driver initialization functions
     GPIO_init();
-
-    // Configure the button pins
-    GPIO_setConfig(Board_GPIO_BUTTON_SW2, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
-    GPIO_setConfig(Board_GPIO_BUTTON_SW3, GPIO_CFG_IN_PU | GPIO_CFG_IN_INT_RISING);
-
-    // install Button callback
-    GPIO_setCallback(Board_GPIO_BUTTON_SW2, gpioButtonFxnSW2);
-    GPIO_setCallback(Board_GPIO_BUTTON_SW3, gpioButtonFxnSW3);
-
-    // Enable interrupts
-    GPIO_enableInt(Board_GPIO_BUTTON_SW2);
-    GPIO_enableInt(Board_GPIO_BUTTON_SW3);
 
     // Enable IR receiver and emitter
     IR_Init_Receiver();
@@ -144,7 +133,9 @@ int main(void)
     Sd = sl_Socket(SL_AF_INET, SL_SOCK_DGRAM, 0);
     if( 0 > Sd )
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("\r\n%s\r\n", SOCKET_ERROR);
+#endif
     }
 
     // Binding Socket
@@ -155,7 +146,9 @@ int main(void)
     Status = sl_Bind(Sd, ( SlSockAddr_t *)&Addr, AddrSize);
     if( Status )
     {
+#ifdef DEBUG_SESSION
         UART_PRINT("\r\n%s\r\n", BINDING_ERROR);
+#endif
     }
 
     // Retrieved from http://e2e.ti.com/support/wireless-connectivity/wifi/f/968/t/368485
@@ -200,13 +193,17 @@ int main(void)
         Status = sl_RecvFrom(Sd, recBuf, BUFF_SIZE, 0, ( SlSockAddr_t *)&Addr, &AddrSize);
         if(Status < 0 && Status != SL_EAGAIN)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("\r\n%s\r\n", RECEIVING_ERROR);
+#endif
         }
 
         // Data was received
         if (Status > 0)
         {
+#ifdef DEBUG_SESSION
             UART_PRINT("\r\nReceived: %s\r\n", recBuf);
+#endif
 
             // Parse commands from the receive buffer
             char *strState;
@@ -255,7 +252,9 @@ int main(void)
                                 Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                                 if( strlen(sendBuf) != Status )
                                 {
+#ifdef DEBUG_SESSION
                                     UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                                 }
                             }
                         }
@@ -267,7 +266,9 @@ int main(void)
                             Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                             if( strlen(sendBuf) != Status )
                             {
+#ifdef DEBUG_SESSION
                                 UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                             }
                         }
 
@@ -281,7 +282,9 @@ int main(void)
                         Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                         if( strlen(sendBuf) != Status )
                         {
+#ifdef DEBUG_SESSION
                             UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                         }
                     }
                 }
@@ -297,7 +300,7 @@ int main(void)
 
                 // Get the user-assigned name of the device
                 len = DEVICE_NAME_LENGTH;
-                char* deviceName[len];
+                char deviceName[len];
                 memset(deviceName, 0, len);
                 configOpt = SL_WLAN_P2P_OPT_DEV_NAME;
                 sl_WlanGet(SL_WLAN_CFG_P2P_PARAM_ID, &configOpt , &len, (_u8*)deviceName);
@@ -314,7 +317,9 @@ int main(void)
 
                 if( strlen(sendBuf) != Status )
                 {
+#ifdef DEBUG_SESSION
                     UART_PRINT("\r\n%s\r\n", DEVICE_INFO_ERROR);
+#endif
                 }
                 currState = idle;
             }
@@ -333,7 +338,9 @@ int main(void)
 
                     if(refreshBuffSize != Status)
                     {
+#ifdef DEBUG_SESSION
                         UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                     }
 
                     free(refreshBuff);
@@ -345,7 +352,9 @@ int main(void)
                     // Send the same message to the UART for debug purposes
                     if(strlen(BUTTON_REFRESH_ERROR) != Status)
                     {
+#ifdef DEBUG_SESSION
                         UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                     }
                 }
                 currState = idle;
@@ -365,7 +374,9 @@ int main(void)
 
                     if( strlen(sendBuf) != Status )
                     {
+#ifdef DEBUG_SESSION
                         UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                     }
 
                     // Wait for button recording to be completed
@@ -390,7 +401,9 @@ int main(void)
                         Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                         if( strlen(sendBuf) != Status )
                         {
+#ifdef DEBUG_SESSION
                             UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                         }
                     }
                     IRreceiverSetMode(passthru);
@@ -419,7 +432,9 @@ int main(void)
                             Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                             if( strlen(sendBuf) != Status )
                             {
+#ifdef DEBUG_SESSION
                                 UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                             }
                         }
                         else{
@@ -427,7 +442,9 @@ int main(void)
                             Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                             if( strlen(sendBuf) != Status )
                             {
+#ifdef DEBUG_SESSION
                                 UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                             }
                         }
 
@@ -439,7 +456,9 @@ int main(void)
                         Status = sl_SendTo(Sd, sendBuf, strlen(sendBuf), 0, (SlSockAddr_t*)&Addr, sizeof(SlSockAddr_t));
                         if( strlen(sendBuf) != Status )
                         {
+#ifdef DEBUG_SESSION
                             UART_PRINT("\r\n%s\r\n", SEND_ERROR);
+#endif
                         }
                     }
                 }
@@ -548,29 +567,6 @@ char* createButtonRefreshBuffer()
 void toLower(char* string){
     for(int i = 0; string[i]; i++){
         string[i] = tolower(string[i]);
-    }
-}
-
-/**
- *  ======== gpioButtonFxnSW2 ========
- *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON_SW2
- */
-void gpioButtonFxnSW2(uint_least8_t index)
-{
-    // Delete the first button file
-    mainDeleteButton = true;
-}
-
-/**
- *  ======== gpioButtonFxnSW3 ========
- *  Callback function for the GPIO interrupt on Board_GPIO_BUTTON_SW3
- */
-void gpioButtonFxnSW3(uint_least8_t index)
-{
-    // send a button as a test in this interrupt for now
-    if (emitterReady && !IRbuttonSending())
-    {
-        mainSendButton = true;
     }
 }
 

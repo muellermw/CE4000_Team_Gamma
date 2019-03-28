@@ -1,7 +1,7 @@
 /**
  * IR_Receiver.h
  *
- * Author: Max Kallenberger
+ * Author: Max Kallenberger, Marcus Mueller
  *
  * Receiver is GPIO 15 (PIN 6) for the capture timer, GPIO 14 (PIN 5) for the passthrough interrupt.
  */
@@ -31,6 +31,10 @@ typedef enum
 void IR_Init_Receiver();
 SignalInterval* getIRsequence(uint16_t* sequenceSize);
 uint16_t getIRcarrierFrequency();
+SignalInterval* getIRsequence(uint16_t* sequenceSize);
 void IRreceiverSetMode(Receiver_Mode mode);
+void IRstartEdgeDetectGPIO();
+void IRstopEdgeDetectGPIO();
+bool IRbuttonReady();
 
 #endif /* INC_IR_RECEIVER_H_ */

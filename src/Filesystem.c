@@ -16,7 +16,7 @@
 /**
  * This is an API wrapper for the TI proprietary file system that is used with their non-volatile storage solution.
  * This API will be used to store IR button data that will be retrieved by the user or restored on power cycle.
- * @file filesystem.c
+ * @file Filesystem.c
  * @date 1/3/2019
  * @author Marcus Mueller
  */
@@ -29,9 +29,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <ti/drivers/net/wifi/simplelink.h>
+#include <ti/drivers/GPIO.h>
+#include <ti/drivers/SPI.h>
 #include "Board.h"
-#include "wifi.h"
-#include "filesystem.h"
+#include "Wifi.h"
+#include "Filesystem.h"
 
 #ifdef DEBUG_SESSION
 #include "uart_term.h"
@@ -456,9 +458,19 @@ bool fsCheckFileExists(const unsigned char* fileName)
  */
 void filesystem_init()
 {
-    // Wifi Enabling (needed for the file system)
-    wifi_init();
+    GPIO_init();
+    SPI_init();
 
+    // Initialization of the NWP needed for the file system
+    simplelink_init(0);
+}
+
+/**
+ * This method utilizes the static file system info methods to print
+ * file and overall storage info over UART for debug purposes.
+ */
+void fsPrintInfo()
+{
     // These are static debug UART calls
 #ifdef DEBUG_SESSION
     st_ShowStorageInfo();
