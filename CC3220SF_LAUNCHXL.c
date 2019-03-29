@@ -609,16 +609,16 @@ TimerCC32XX_Object timerCC3220SFObjects[CC3220SF_LAUNCHXL_TIMERCOUNT];
 
 const TimerCC32XX_HWAttrs timerCC3220SFHWAttrs[CC3220SF_LAUNCHXL_TIMERCOUNT] = {
     {
-        .baseAddress = TIMERA1_BASE,
+        .baseAddress = TIMERA0_BASE,
         .subTimer = TimerCC32XX_timer32,
-        .intNum = INT_TIMERA1A,
+        .intNum = INT_TIMERA0A,
         .intPriority = ~0
     },
 
     {
-        .baseAddress = TIMERA0_BASE,
+        .baseAddress = TIMERA1_BASE,
         .subTimer = TimerCC32XX_timer32,
-        .intNum = INT_TIMERA0A,
+        .intNum = INT_TIMERA1A,
         .intPriority = ~0
     }
 };

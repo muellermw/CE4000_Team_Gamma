@@ -35,11 +35,17 @@ static int wlanConnectedToAP = 0;
 static int boardRestarting = 0;
 static uint8_t timeoutCount = 0;
 static uint8_t timeoutMax = 20;
+static uint8_t pairingLEDblink = 0;
+static Timer_Handle pairingOneShotHandle;
+static Timer_Params pairingOneShotParams;
 
 static void wifiStartWLANProvisioning();
-static int32_t wifiProvisioning();
+static void pairingTimerInit();
 static void resetBoard();
-static void WiFiProvisionTimeoutHandler(Timer_Handle handle);
+static int32_t wifiProvisioning();
+
+void WiFiProvisionTimeoutHandler(Timer_Handle handle);
+void WiFiPairingTimeoutHandler(Timer_Handle handle);
 
 /**
  * Initialize the WiFi subsystem and ensure a connection before returning
@@ -48,6 +54,8 @@ void wifi_init()
 {
     GPIO_init();
     SPI_init();
+
+    PAIRING_LED_ON();
 
     // The NWP has not been initialized yet, do it now
     if (initSlDevice)
@@ -59,6 +67,32 @@ void wifi_init()
     wlanNeedUserProvision = 0;
 
     wifiStartWLANProvisioning();
+
+    // If we needed to provision, stop the pairing LED from blinking when we finish
+    if (pairingLEDblink)
+    {
+        Timer_stop(pairingOneShotHandle);
+        Timer_close(pairingOneShotHandle);
+        pairingLEDblink = 0;
+    }
+
+    PAIRING_LED_OFF();
+}
+
+/**
+ * Initialize the pairing timer using TI's timer API
+ */
+static void pairingTimerInit()
+{
+    Timer_init();
+
+    Timer_Params_init(&pairingOneShotParams);
+    pairingOneShotParams.periodUnits = Timer_PERIOD_US;
+    pairingOneShotParams.timerMode  = Timer_ONESHOT_CALLBACK;
+    pairingOneShotParams.timerCallback = WiFiPairingTimeoutHandler;
+    // Set a 1 second timeout (2 Hz period for pairing LED)
+    pairingOneShotParams.period = 1000000;
+    pairingOneShotHandle = Timer_open(Board_EMITTER_TIMER, &pairingOneShotParams);
 }
 
 /**
@@ -86,6 +120,11 @@ void wifiStartWLANProvisioning()
         if (wlanNeedUserProvision)
         {
             wifiProvisioning();
+
+            // Start blinking the pairing LED
+            pairingTimerInit();
+            Timer_start(pairingOneShotHandle);
+            pairingLEDblink = 1;
         }
     }
 
@@ -325,7 +364,7 @@ static void resetBoard()
  * While provisioning, restart the program if provisioning has not completed for a certain amount of time
  * @param handle The timer handle (not used, but necessary for the timer callback)
  */
-static void WiFiProvisionTimeoutHandler(Timer_Handle handle)
+void WiFiProvisionTimeoutHandler(Timer_Handle handle)
 {
     // Want to time out after 10 minutes, so check that the count is < 20
     // (30 seconds * 20 = 600 seconds)
@@ -347,6 +386,24 @@ static void WiFiProvisionTimeoutHandler(Timer_Handle handle)
         // Full timeout - reset the board
         resetBoard();
     }
+}
+
+/**
+ * Keep an LED blinking while the board is not connected to a WiFi AP
+ * @param handle The timer handle (not used, but necessary for the timer callback)
+ */
+void WiFiPairingTimeoutHandler(Timer_Handle handle)
+{
+    if (GPIO_read(Board_PAIRING_OUTPUT_PIN))
+    {
+        PAIRING_LED_OFF();
+    }
+    else
+    {
+        PAIRING_LED_ON();
+    }
+
+    Timer_start(pairingOneShotHandle);
 }
 
 
@@ -411,6 +468,8 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             UART_PRINT("Device disconnected from the AP on an ERROR\r\n");
 #endif
         }
+        // We are now disconnected - show the user by lighting the pairing LED
+        PAIRING_LED_ON();
     }
     break;
 
@@ -625,6 +684,9 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
         // When we acquire an IP, let the WiFi connection loop know the board is connected to an AP
         wlanConnectToRouter = 0;
         timeoutCount = 0;
+
+        // We are now connected - let the user know by turning off the pairing LED
+        PAIRING_LED_OFF();
     }
     break;
 

@@ -19,6 +19,10 @@
 #define DEVICE_SSID_LENGTH 32
 #define DEFAULT_DEVICE_NAME "mysimplelink"
 
+// Pairing LED control function shortcuts
+#define PAIRING_LED_OFF() GPIO_write(Board_PAIRING_OUTPUT_PIN, Board_GPIO_LED_OFF)
+#define PAIRING_LED_ON() GPIO_write(Board_PAIRING_OUTPUT_PIN, Board_GPIO_LED_ON)
+
 // Uncomment this line to use our SSID for the Access Point
 //#define USE_NCIR_SSID
 
