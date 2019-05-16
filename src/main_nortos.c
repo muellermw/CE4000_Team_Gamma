@@ -135,6 +135,9 @@ int main(void)
     {
 #ifdef DEBUG_SESSION
         UART_PRINT("\r\n%s\r\n", SOCKET_ERROR);
+
+        // At this point, we can't go any further, so try to restart
+        resetBoard();
 #endif
     }
 
@@ -148,6 +151,9 @@ int main(void)
     {
 #ifdef DEBUG_SESSION
         UART_PRINT("\r\n%s\r\n", BINDING_ERROR);
+
+        // At this point, we can't go any further, so try to restart
+        resetBoard();
 #endif
     }
 

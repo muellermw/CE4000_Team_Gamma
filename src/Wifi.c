@@ -41,7 +41,6 @@ static Timer_Params pairingOneShotParams;
 
 static void wifiStartWLANProvisioning();
 static void pairingTimerInit();
-static void resetBoard();
 static int32_t wifiProvisioning();
 
 void WiFiProvisionTimeoutHandler(Timer_Handle handle);
@@ -104,7 +103,7 @@ static void pairingTimerInit()
  * 2) If a connection is available, establish a connection
  * 3) If a connection is not available, start user provisioning by creating an AP on the board
  */
-void wifiStartWLANProvisioning()
+static void wifiStartWLANProvisioning()
 {
     while (wlanConnectToRouter || wlanNeedUserProvision)
     {
@@ -347,7 +346,7 @@ int32_t wifiProvisioning()
  * @note This is very useful when issues with WiFi connections arise. This allows users
  *       to re-provision the board in multiple failure instances
  */
-static void resetBoard()
+void resetBoard()
 {
     if (boardRestarting == 0)
     {

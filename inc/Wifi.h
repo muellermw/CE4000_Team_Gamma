@@ -24,9 +24,10 @@
 #define PAIRING_LED_ON() GPIO_write(Board_PAIRING_OUTPUT_PIN, Board_GPIO_LED_ON)
 
 // Uncomment this line to use our SSID for the Access Point
-//#define USE_NCIR_SSID
+#define USE_NCIR_SSID
 
 void wifi_init();
 int32_t simplelink_init(uint8_t const role);
+void resetBoard();
 
 #endif /* INC_WIFI_H_ */
